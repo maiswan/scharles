@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
-import { existsSync } from "fs";
 import { pathFetcher } from "../index.ts";
+import path from "path";
 
-const sendFile = (res: Response, path: string, isRelativePath: boolean) => {
-    const options = isRelativePath ? { root: `${__dirname}/../../` } : {};
+const sendFile = (res: Response, imagePath: string) => {
+    const options = path.isAbsolute(imagePath) ? {} : { root: `${__dirname}/../../` };
 
-    res.sendFile(path, options, (error) => {
+    res.sendFile(imagePath, options, (error) => {
         if (!error) { return; }
 
         console.error("Error sending image:", error);
@@ -15,7 +15,5 @@ const sendFile = (res: Response, path: string, isRelativePath: boolean) => {
 
 export const get = (req: Request, res: Response) => {
     const path = pathFetcher.next();
-
-    // Stream the image to avoid memory issues
-    sendFile(res, path, !existsSync(path));
+    sendFile(res, path);
 };
