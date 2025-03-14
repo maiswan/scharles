@@ -33,8 +33,7 @@ const App: React.FC = () => {
 
     // Listen for commands
     useEffect(() => {
-        const wsr = new WebSocketReceiver("ws://localhost:12024", components);
-        return () => wsr.close();
+        new WebSocketReceiver("ws://localhost:12024", components);
     }, []);
 
     return (
