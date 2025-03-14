@@ -1,6 +1,10 @@
 ## scharles
 
-TypeScript + React customizable slideshow on browser. This supercedes [charles](https://github.com/maiswan/charles).
+TypeScript + React customizable slideshow on browser.
+
+https://github.com/user-attachments/assets/a7e48d89-d39c-4d67-96fd-addd17d1c10a
+
+This supercedes [charles](https://github.com/maiswan/charles).
 
 ## Why upgrade?
 In addition to almost every feature from charles, scharles allows:
