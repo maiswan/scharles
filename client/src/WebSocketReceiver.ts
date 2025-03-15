@@ -37,51 +37,51 @@ export default class WebSocketReceiver {
     }
 
     private onmessage = (event: MessageEvent) => {
-        const { module, action, parameter } = JSON.parse(event.data);
-        const component = this.components.current[module].current;
+        const { component, action, parameter } = JSON.parse(event.data);
+        const componentRef = this.components.current[component].current;
 
         // intercept clientID for later responses
-        if (module === "self" && action === "set" && parameter[0] === "clientId") {
+        if (component === "self" && action === "set" && parameter[0] === "clientId") {
             this.clientId = parameter[1] as number;
         }
 
         switch (action) {
             case "enable":
-                component?.enable();
-                this.respond(component?.isEnabled());
+                componentRef?.enable();
+                this.respond(componentRef?.isEnabled());
                 break;
             case "disable":
-                component?.disable();
-                this.respond(component?.isEnabled());
+                componentRef?.disable();
+                this.respond(componentRef?.isEnabled());
                 break;
             case "toggle":
-                component?.toggle();
-                this.respond(component?.isEnabled());
+                componentRef?.toggle();
+                this.respond(componentRef?.isEnabled());
                 break;
             case "isEnabled":
-                this.respond(component?.isEnabled());
+                this.respond(componentRef?.isEnabled());
                 break;
             case "set":
-                component?.set(parameter[0], parameter[1]);
-                this.respond(component?.get(parameter[0]));
+                componentRef?.set(parameter[0], parameter[1]);
+                this.respond(componentRef?.get(parameter[0]));
                 break;
             case "get":
-                this.respond(component?.get(parameter[0]));
+                this.respond(componentRef?.get(parameter[0]));
                 break;
             case "enableDebug":
-                component?.enableDebug();
-                this.respond(component?.isDebugging());
+                componentRef?.enableDebug();
+                this.respond(componentRef?.isDebugging());
                 break;
             case "disableDebug":
-                component?.disableDebug();
-                this.respond(component?.isDebugging());
+                componentRef?.disableDebug();
+                this.respond(componentRef?.isDebugging());
                 break;
             case "toggleDebug":
-                component?.toggleDebug();
-                this.respond(component?.isDebugging());
+                componentRef?.toggleDebug();
+                this.respond(componentRef?.isDebugging());
                 break;
             case "isDebugging":
-                this.respond(component?.isDebugging());
+                this.respond(componentRef?.isDebugging());
                 break;
         };
     }
