@@ -15,11 +15,11 @@ export default class WebSocketHandler {
         this.server.on('connection', (ws) => this.initializeClient(ws));
     }
 
-    public send(client: number, module: string, action: string, parameter: unknown[] | undefined = undefined, isDebug = this.isDebug) {
+    public send(client: number, component: string, action: string, parameter: unknown[] | undefined = undefined, isDebug = this.isDebug) {
         if (!(client in this.clients)) { return; } 
         const destination = this.clients[client];
 
-        const json = JSON.stringify({ module: module, action: action, parameter: parameter });
+        const json = JSON.stringify({ component: component, action: action, parameter: parameter });
         if (isDebug) { console.log(client, json); }
 
         return new Promise((resolve) => {
@@ -29,17 +29,11 @@ export default class WebSocketHandler {
         });
     }
 
-    public broadcast(module: string, action: string, parameter: unknown[] | undefined = undefined, isDebug = this.isDebug) {
-        const promises: Promise<unknown>[] = [];
-
-        Object
+    public broadcast(component: string, action: string, parameter: unknown[] | undefined = undefined, isDebug = this.isDebug) {
+        return Object
             .keys(this.clients)
-            .forEach(x => {
-                const promise = this.send(x as unknown as number, module, action, parameter, isDebug);
-                if (promise !== undefined) { promises.push(promise); }
-            });
-
-        return promises;
+            .map(x => this.send(x as unknown as number, component, action, parameter, isDebug))
+            .filter(x => x !== undefined);
     }
 
     private getUniqueId(): number {
