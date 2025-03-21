@@ -23,7 +23,8 @@ export default class InputProcessor {
 
         // exit
         if (btoa(client) === 'ZnVja3lvdQ==') {
-            process.exit(0);
+            process.exitCode = 0;
+            return;
         }
 
         const clientId = Number(client);
