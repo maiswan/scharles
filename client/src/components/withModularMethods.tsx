@@ -1,39 +1,31 @@
-import { forwardRef, useState, useImperativeHandle, ComponentType, useEffect } from 'react';
+import { useState, useImperativeHandle, ComponentType } from 'react';
 import { ModularMethods, ModularProps } from './types';
 
 const withModularMethods = <P extends object>(
     WrappedComponent: ComponentType<P & ModularProps>
 ) => {
-    const EnhancedComponent = forwardRef<ModularMethods, P>(
-        ({ ...props }, ref) => {
-            const [isEnabled, setIsEnabled] = useState(false);
-            const [isDebug, setIsDebug] = useState(false);
-            const [data, setData] = useState<Record<string, unknown>>({});
+    const EnhancedComponent = ({ ref, ...props }: P & { ref?: React.Ref<ModularMethods> }) => {
+        const [isEnabled, setIsEnabled] = useState(false);
+        const [isDebug, setIsDebug] = useState(false);
+        const [data, setData] = useState<Record<string, unknown>>({});
 
-            const [childData, setChildData] = useState<ModularProps>({data: data, isDebug: isDebug});
+        useImperativeHandle(ref, () => ({
+            enable: () => setIsEnabled(true),
+            disable: () => setIsEnabled(false),
+            toggle: () => setIsEnabled((prev) => !prev),
+            isEnabled: () => isEnabled,
 
-            useEffect(() => {
-                setChildData((prev) => ({ ...prev, ["isDebug"]: isDebug, ["data"]: data }));
-            }, [isDebug, data]);
+            set: (key: string, value: unknown) => setData((prev) => ({ ...prev, [key]: value })),
+            get: (key: string): unknown => data[key],
 
-            useImperativeHandle(ref, () => ({
-                enable: () => setIsEnabled(true),
-                disable: () => setIsEnabled(false),
-                toggle: () => setIsEnabled(!isEnabled),
-                isEnabled: () => isEnabled,
+            enableDebug: () => setIsDebug(true),
+            disableDebug: () => setIsDebug(false),
+            toggleDebug: () => setIsDebug((prev) => !prev),
+            isDebugging: () => isDebug,
+        }));
 
-                set: (key: string, value: unknown) => setData((prev) => ({ ...prev, [key]: value })),
-                get: (key: string): unknown => data[key],
-                
-                enableDebug: () => setIsDebug(true),
-                disableDebug: () => setIsDebug(false),
-                toggleDebug: () => setIsDebug(!isDebug),
-                isDebugging: () => isDebug,                
-            }));
-
-            return isEnabled ? <WrappedComponent {...(props as P)} {...childData} /> : null;
-        }
-    );
+        return isEnabled && <WrappedComponent {...(props as P)} {...{ data, isDebug }} />;
+    };
 
     EnhancedComponent.displayName = `WithModularMethods(${WrappedComponent.displayName || WrappedComponent.name || 'Component'})`;
 

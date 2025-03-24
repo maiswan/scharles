@@ -50,6 +50,6 @@ process.on("SIGINT", () => {
     
     server.close(() => {
         console.log(`Port ${config.Port} is free. Unless Node.js refuses to die.`);
-        process.exit(0);
+        process.exitCode = 0;
     });
 })

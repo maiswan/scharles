@@ -16,7 +16,7 @@ const BackdropFilterComponent: React.FC<ModularProps> = ({ data, isDebug }) => {
 
     return (
         <div>
-            <div className="w-screen h-screen transition-all duration-500" style={{ backdropFilter: cssFilters || 'none' }} />
+            <div className="w-screen h-screen transition-all duration-500" style={{ backdropFilter: cssFilters }} />
             {
                 isDebug && <div className="absolute top-0 left-0 m-2 bg-white p-2 px-4 z-100">
                     <div>{Object.keys(data).map(x => <span key={x}>{x}</span>)}</div>

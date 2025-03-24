@@ -19,7 +19,7 @@ export default class GetEndpointHandler {
 
                 // Decode URI components to handle %20 and other encodings
                 const actualParameters: string[] = [];
-                const parameters = decodeURIComponent(parameter || "").split(" ");
+                const parameters = decodeURIComponent(parameter ?? "").split(" ");
                 if (parameters.length >= 1) { actualParameters.push(parameters[0]); }
                 if (parameters.length >= 2) { actualParameters.push(parameters.slice(1).join(" ")); }
 
@@ -28,7 +28,7 @@ export default class GetEndpointHandler {
 
             } catch (error) {
                 res.status(500).json({
-                    message: error.message
+                    error: error.message
                 });
             }
         });

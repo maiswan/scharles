@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import withModularMethods from '../withModularMethods';
 import { ModularProps } from '../types';
 
@@ -8,9 +8,9 @@ const WallpaperComponent: React.FC<ModularProps> = ({ data, isDebug }) => {
     const [isNextImageVisible, setIsNextImageVisible] = useState(true);
 
     // Plugin
-    const [source, setSource] = React.useState("");
-    const [periodMs, setPeriodMs] = React.useState(30000);
-    const [transitionMs, setTransitionMs] = React.useState(1000);
+    const [source, setSource] = useState("");
+    const [periodMs, setPeriodMs] = useState(30000);
+    const [transitionMs, setTransitionMs] = useState(1000);
 
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
