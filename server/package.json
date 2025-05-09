@@ -1,6 +1,7 @@
 {
     "name": "scharles-server",
     "dependencies": {
+        "cors": "^2.8.5",
         "express-file-routing": "^3.0.3",
         "ws": "^8.18.1"
     },

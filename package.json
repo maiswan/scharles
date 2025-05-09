@@ -6,7 +6,7 @@
         "scharles-server"
     ],
     "scripts": {
-        "install:all": "npm install",
+        "install:all": "cd server && npm install && cd ../client && npm install",
         "start:server": "cd server && npm start",
         "start:client": "cd client && npm start",
         "dev:server": "cd server && npx nodemon index.ts",
