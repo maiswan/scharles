@@ -13,7 +13,7 @@ dist-ssr
 *.local
 
 # Private config
-env.secret.json
+config.prod.json
 
 # Editor directories and files
 .vscode/*

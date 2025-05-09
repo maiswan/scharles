@@ -23,9 +23,9 @@ const load = (path: string): Environment => {
     return config;
 }
 
-const config = existsSync("env.secret.json")
-    ? load("env.secret.json")
-    : load("env.json")
+const config = existsSync("config.prod.json")
+    ? load("config.prod.json")
+    : load("config.sample.json")
 
 // Initialize modules
 const wsh = new WebSocketHandler(server, config);
@@ -36,7 +36,7 @@ const geh = new GetEndpointHandler(inp, app);
 export const pathFetcher = new RandomPathFetcher(config.Private.wallpaper.data.Paths as string[]);
 
 server.listen(config.Port, () => {
-    console.log(`Secret config ${existsSync("env.secret.json") ? 'exists' : 'does not exist'}`)
+    console.log(`Secret config ${existsSync("config.prod.json") ? 'exists' : 'does not exist'}`)
     console.log(`Server             running at http://localhost:${config.Port}`);
     console.log(`WebSocketHandler   running at ws://localhost:${config.Port}`);
     console.log(`CommandLineHandler running`);
