@@ -1,56 +1,72 @@
 {
-	"Port": 12024,
-	"Private": {
-		"wallpaper": {
-			"data": {
-				"Paths": [
-					"./assets/123456.webp",
-					"./assets/345612.webp",
-					"./assets/561234.webp"
-				]
-			}
-		}
+	"server": {
+		"port": 12024,
+		"rateLimit": {
+			"maxRequests": 2,
+			"cooldownMs": 1000
+		},
+		"maxCommandLength": 128
 	},
-	"Public": {
+	"modules": {
 		"wallpaper": {
-			"isEnabled": true,
-			"isDebug": false,
-			"data": {
-				"source": "http://localhost:12024/image",
-				"periodMs": 5000,
-				"transitionMs": 1000
+			"public": {
+				"isEnabled": true,
+				"isDebug": false,
+				"data": {
+					"source": "http://localhost:12024/image",
+					"periodMs": 5000,
+					"transitionMs": 1000
+				}
+			},
+			"private": {
+				"data": {
+					"paths": [
+						"./assets/123456.webp",
+						"./assets/345612.webp",
+						"./assets/561234.webp"
+					]
+				}
 			}
 		},
 		"noise": {
-			"isEnabled": false,
-			"isDebug": false,
-			"data": {
-				"opacity": 0.5
+			"public": {
+				"isEnabled": false,
+				"isDebug": false,
+				"data": {
+					"opacity": 0.5
+				}
 			}
 		},
 		"backdropFilter": {
-			"isEnabled": false,
-			"isDebug": false,
-			"data": {
-				"brightness": 0.75
+			"public": {
+				"isEnabled": false,
+				"isDebug": false,
+				"data": {
+					"brightness": 0.75
+				}
 			}
 		},
 		"ripple": {
-			"isEnabled": true,
-			"isDebug": false,
-			"data": {
-				"width": "10px",
-				"height": "10px",
-				"position": "fixed",
-				"border-radius": "50%",
-				"box-shadow": "0 0 4px 2px rgba(155,138,189,0.5)",
-				"animation": "ripple-effect .6s ease"
+			"public": {
+				"isEnabled": true,
+				"isDebug": false,
+				"data": {
+					"width": "10px",
+					"height": "10px",
+					"position": "fixed",
+					"borderRadius": "50%",
+					"boxShadow": "0 0 4px 2px rgba(155,138,189,0.5)",
+					"animation": "fx .6s ease forwards",
+					"_keyframes":"fx{0%{transform:scale(0);}30%{opacity:1;}100%{transform:scale(20);opacity:0;}}"
+				}
 			}
 		},
 		"self": {
-			"isEnabled": true,
-			"isDebug": false,
-			"data": {}
+			"public": {
+				"isEnabled": true,
+				"isDebug": false,
+				"data": {}
+			}
 		}
 	}
 }

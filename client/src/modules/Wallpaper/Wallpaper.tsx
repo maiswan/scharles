@@ -1,13 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
-import withModularMethods from '../withModularMethods';
-import { ModularProps } from '../types';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
+import { Module } from '../types';
+import { useModule } from '../../hooks/useModule';
+import { useLogger } from '../../hooks/useLogger';
 
-const WallpaperComponent: React.FC<ModularProps> = ({ data, isDebug }) => {
+const Wallpaper = forwardRef<Module, unknown>((_, ref) => {
+    // Module
+    const identifier = "wallpaper";
+    const acceptedDataKeys = ["source", "periodMs", "transitionMs"]
+    const state = useModule(identifier, acceptedDataKeys);
+    useImperativeHandle(ref, () => state);
+    const logger = useLogger();
+
+    // Plugin
     const [image, setImage] = useState<string | undefined>();
     const [nextImage, setNextImage] = useState<string | undefined>();
     const [isNextImageVisible, setIsNextImageVisible] = useState(true);
 
-    // Plugin
     const [source, setSource] = useState("");
     const [periodMs, setPeriodMs] = useState(30000);
     const [transitionMs, setTransitionMs] = useState(1000);
@@ -18,10 +26,16 @@ const WallpaperComponent: React.FC<ModularProps> = ({ data, isDebug }) => {
         try {
             if (source === "") { return; }
 
+            logger.info(`[wallpaper] Fetching ${source}`);
             const now = Date.now(); // bust cache
+            
             const response = await fetch(`${source}?t=${now}`);
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
+            logger.debug("[wallpaper] RX", {
+                size: blob.size,
+                type: blob.type
+            });
             
             setImage(url);
             setIsNextImageVisible(false);
@@ -32,37 +46,44 @@ const WallpaperComponent: React.FC<ModularProps> = ({ data, isDebug }) => {
             setIsNextImageVisible(true);
 
             await delay(transitionMs);
-        } catch {
+        } catch (error) {
+            logger.error(`[wallpaper] Fetching ${source} failed`, error);
             return;
         }
     }, [source, transitionMs]);
 
-
     useEffect(() => {
-        if (data.source) { setSource(data.source as string); }
-        if (data.periodMs) { setPeriodMs(data.periodMs as number); }
-        if (data.transitionMs) { setTransitionMs(data.transitionMs as number); }
+        if (state.data.source) { 
+            setSource(state.data.source as string);
+        }
+        if (state.data.periodMs) {
+            setPeriodMs(state.data.periodMs as number);
+        }
+        if (state.data.transitionMs) { 
+            setTransitionMs(state.data.transitionMs as number);
+        }
 
         fetchImage();
         const interval = setInterval(fetchImage, periodMs);
         return () => { clearInterval(interval); };
-    }, [data, fetchImage, periodMs]);
+    }, [state.data.source, state.data.periodMs, state.data.transitionMs, fetchImage, periodMs]);
 
+    if (!state.isEnabled) { return; }
     return (
         <div className="w-screen h-screen">
             <img className="absolute w-screen h-screen object-cover object-top" src={image}></img>
             <img className={`absolute w-screen h-screen object-cover object-top transition-opacity ease-in-out ${isNextImageVisible ? "opacity-100" : "opacity-0"}`} style={{ transitionDuration: `${transitionMs}ms` }} src={nextImage}></img>
 
-            {isDebug && <div className="absolute m-2 text-white bg-black p-2 px-4 z-100">
-                <div className="font-bold">Wallpaper</div>
+            {state.isDebug && <div className="absolute m-2 text-white bg-black p-2 px-4 z-100">
+                <div className="font-bold">{identifier}</div>
                 <div>{source} {periodMs} {transitionMs}</div>
                 <div>{image}</div>
                 <div>{nextImage}</div>
                 <div>{isNextImageVisible + ""}</div>
+                <div>{Object.keys(state.data).map(k => <div>{k} {String(state.data[k])}</div>)}</div>
             </div>}
         </div>
     )
-};
+});
 
-const Wallpaper = withModularMethods(WallpaperComponent);
 export default Wallpaper;
