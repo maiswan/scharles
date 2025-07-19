@@ -1,8 +1,8 @@
-import Wallpaper from "./Wallpaper";
-import BackdropFilter from "./BackdropFilter";
-import Noise from "./Noise";
-import Ripple from "./Ripple";
-import Self from "./Self";
+import Wallpaper from "./Wallpaper/index";
+import BackdropFilter from "./BackdropFilter/index";
+import Noise from "./Noise/index";
+import Ripple from "./Ripple/index";
+import Self from "./Self/index";
 
 const Modules = {
     Wallpaper,
