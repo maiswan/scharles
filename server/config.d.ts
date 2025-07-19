@@ -5,11 +5,11 @@ export interface Config {
 
 export interface ServerConfig {
     port: number,
-    rateLimit: rateLimitConfig,
+    rateLimit: RateLimitConfig,
     maxCommandLength: number,
 }
 
-export interface rateLimitConfig {
+export interface RateLimitConfig {
     maxRequests: number,
     cooldownMs: number,
 }
