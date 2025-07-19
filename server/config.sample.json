@@ -13,7 +13,7 @@
 				"isEnabled": true,
 				"isDebug": false,
 				"data": {
-					"source": "http://localhost:12024/image",
+					"source": "http://localhost:12024/api/image",
 					"periodMs": 5000,
 					"transitionMs": 1000
 				}
@@ -23,7 +23,18 @@
 					"paths": [
 						"./assets/123456.webp",
 						"./assets/345612.webp",
-						"./assets/561234.webp"
+						"./assets/561234.webp",
+						"./assets/0.webp",
+						"./assets/1.webp",
+						"./assets/2.webp",
+						"./assets/3.webp",
+						"./assets/4.webp",
+						"./assets/5.webp",
+						"./assets/6.webp",
+						"./assets/7.webp",
+						"./assets/8.webp",
+						"./assets/9.webp",
+						"./assets/10.webp"
 					]
 				}
 			}
@@ -39,10 +50,10 @@
 		},
 		"backdropFilter": {
 			"public": {
-				"isEnabled": false,
+				"isEnabled": true,
 				"isDebug": false,
 				"data": {
-					"brightness": 0.75
+					"brightness": 0.5
 				}
 			}
 		},
