@@ -1,21 +1,17 @@
-import type { Command, CommandResponse, CommandRecord } from "../../shared/command";
+import { type Command, type CommandResponse, type CommandRecord, type CommandRequest, getShortCommandId } from "../../shared/command";
 import { logger } from "./app";
 
-export interface CommandStore {
-    addCommand(clientIds: number[], command: Command): void,
-    addResponse(response: CommandResponse): boolean,
-    getCommandRecord(comamndId: string): CommandRecord | undefined
-}
+export type CommandStore = ReturnType<typeof createCommandStore>;
 
-export function createCommandStore(): CommandStore {
+export function createCommandStore() {
     const store = new Map<string, CommandRecord>();
 
     return {
-        addCommand(clientIds: number[], command: Command): void {
-            logger.debug('[commandStore] Adding command', command);
-            store.set(command.commandId, {
-                command,
-                clientIds,
+        addRequest(commandId: string, request: CommandRequest): void {
+            logger.debug(`[commandStore] Adding command ${getShortCommandId(commandId)}`);
+            store.set(commandId, {
+                commandId,
+                request,
                 responses: {},
                 transmitTimestamp: new Date(),
                 receiveTimestamp: null
@@ -23,7 +19,7 @@ export function createCommandStore(): CommandStore {
         },
 
         addResponse(response: CommandResponse): boolean {
-            logger.debug('[commandStore] Adding response', response);
+            logger.debug(`[commandStore] Adding response from client ${response.clientId} for ${getShortCommandId(response)}`);
             const record = store.get(response.commandId);
             if (!record) {
                 logger.warn("[commandStore] Parent command", response.commandId, "does not exist");
@@ -36,18 +32,20 @@ export function createCommandStore(): CommandStore {
             return true;
         },
 
-        getCommandRecord(id: string): CommandRecord | undefined {
+        get(id: string): CommandRecord | undefined {
             return store.get(id);
         },
 
-        // getAllCommands(): CommandRecord[] {
-        //     return Array.from(store.values());
-        // },
-        // remove(id: string): boolean {
-        //     return store.delete(id);
-        // },
-        // clear(): void {
-        //     store.clear();
-        // }
+        getAll(): CommandRecord[] {
+            return Array.from(store.values());
+        },
+
+        delete(id: string): boolean {
+            return store.delete(id);
+        },
+
+        deleteAll(): void {
+            store.clear();
+        }
     };
 }

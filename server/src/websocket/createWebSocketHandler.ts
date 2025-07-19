@@ -1,18 +1,14 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { Config } from "../../config";
 import { Server } from "http";
-import { Command, CommandResponse } from "../../../shared/command";
+import { Command, CommandRequest, CommandResponse } from "../../../shared/command";
 import { randomUUID } from "crypto";
-import { CommandStore } from "../createCommandStore";
 import { logger } from "../app";
+import { CommandStore } from "../createCommandStore";
 
-export interface WebSocketHandler {
-    unicast: (client: number, module: string, action: string, parameter?: unknown[]) => string;
-    multicast: (clientIds: number[], module: string, action: string, parameter?: unknown[] | undefined) => string,
-    broadcast: (module: string, action: string, parameter?: unknown[] | undefined) => string,
-}
+export type WebSocketHandler = ReturnType<typeof createWebSocketHandler>;
 
-export function createWebSocketHandler(httpServer: Server, config: Config, commandStore: CommandStore): WebSocketHandler {
+export function createWebSocketHandler(httpServer: Server, config: Config, commandStore: CommandStore) {
     const clients: Record<number, WebSocket> = {};
     const server = new WebSocketServer({ server: httpServer });
 
@@ -22,8 +18,13 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
         return id;
     }
 
-    function createCommand(module: string, action: string, parameter: unknown[] = []): Command {
-        return { commandId: randomUUID(), module, action, parameter };
+    function createCommand(request: CommandRequest): Command {
+        return { 
+            commandId: randomUUID(), 
+            module: request.module,
+            action: request.action,
+            parameters: request.parameters
+        };
     }
 
     function send(clientId: number, command: Command) {
@@ -37,29 +38,31 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
         destination.send(commandJson);
     }
 
-    function unicast(clientId: number, module: string, action: string, parameter: unknown[] = []) {
-        const command = createCommand(module, action, parameter);
-        commandStore.addCommand([clientId], command);
+    function unicast(request: CommandRequest) {
+        const command = createCommand(request);
+        commandStore.addRequest(command.commandId, request);
 
         logger.debug("[webSocketHandler] TX", command);
-        send(clientId, command);
+        send(request.clientIds[0], command);
         
         return command.commandId;
     }
 
-    function multicast(clientIds: number[], module: string, action: string, parameter: unknown[] = []) {
-        const command = createCommand(module, action, parameter);
-        commandStore.addCommand(clientIds, command);
+    function multicast(request: CommandRequest) {
+        const command = createCommand(request);
+        commandStore.addRequest(command.commandId, request);
 
         logger.debug("[webSocketHandler] TX", command);
-        clientIds.forEach(x => send(x, command));
+        request.clientIds.forEach(x => send(x, command));
 
         return command.commandId;
     }
 
-    function broadcast(module: string, action: string, parameters: unknown[] = []) {
-        const clientIds = Object.keys(clients).map(Number);
-        return multicast(clientIds, module, action, parameters);
+    function broadcast(request: CommandRequest) {
+        const everyone = Object.keys(clients).map(Number);
+        request.clientIds = everyone;
+        
+        return multicast(request);
     }
 
     function initializeClient(ws: WebSocket) {
@@ -67,7 +70,7 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
         clients[id] = ws;
         logger.info(`[webSocketHandler] Client ${id} connected`);
 
-        unicast(id, "self", "set", ["clientId", id]);
+        unicast({ clientIds: [id], module: "self", action: "set", parameters: ["clientId", id]});
 
         Object.keys(config.modules).forEach(module => {
             const settings = config.modules[module].public;
@@ -75,13 +78,13 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
 
             Object.keys(keys).forEach(key => {
                 const value = keys[key];
-                unicast(id, module, "set", [key, value]);
+                unicast({ clientIds: [id], module, action: "set", parameters: [key, value]});
             });
 
             const enableCommand = settings.isEnabled ? "enable" : "disable";
             const enableDebugCommand = settings.isDebug ? "enableDebug" : "disableDebug";
-            unicast(id, module, enableCommand);
-            unicast(id, module, enableDebugCommand);
+            unicast({ clientIds: [id], module, action: enableCommand, parameters: []});
+            unicast({ clientIds: [id], module, action: enableDebugCommand, parameters: []});
         });
 
         ws.addEventListener('message', (event) => {

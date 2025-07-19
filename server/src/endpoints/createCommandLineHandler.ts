@@ -4,7 +4,7 @@ import Endpoint from "./endpoint";
 
 export function createCommandLineHandler(commandTransmitter: CommandTransmitter): Endpoint {
     const handleInput = (input: string) => {
-        commandTransmitter.transmitFromSingleValue(input);
+        commandTransmitter.transmitFromString(input);
     }
 
     const rl = readline.createInterface({
