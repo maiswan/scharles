@@ -2,10 +2,8 @@ import { createWebSocketHandler } from "./websocket/createWebSocketHandler";
 import http from "http";
 import { existsSync, readFileSync } from "fs";
 import { createCommandLineHandler } from "./endpoints/createCommandLineHandler";
-import { createHttpGetHandler } from "./endpoints/createHttpGetHandler";
 import { Config } from "../config";
 import { createCommandTransmitter } from "./websocket/createCommandTransmitter";
-import Endpoint from "./endpoints/endpoint";
 import { createCommandStore } from "./createCommandStore";
 import createApp from "./createApp";
 import { Logger, ILogObj } from "tslog";
@@ -40,18 +38,19 @@ const app = createApp(config.server.maxCommandLength, config.server.rateLimit.ma
 const httpServer = http.createServer(app);
 
 // Initialize modules
-const commandStore = createCommandStore();
+export const commandStore = createCommandStore();
 const wsHandler = createWebSocketHandler(httpServer, config, commandStore);
-const commandTx = createCommandTransmitter(wsHandler);
+export const commandTx = createCommandTransmitter(wsHandler);
 
-const endpoints: Endpoint[] = []
-endpoints.push(createCommandLineHandler(commandTx));
-endpoints.push(createHttpGetHandler(commandTx, app, commandStore));
+createCommandLineHandler(commandTx);
+// const endpoints: Endpoint[] = []
+// endpoints.push(createCommandLineHandler(commandTx));
+// endpoints.push(createHttpGetHandler(commandTx, app, commandStore));
 
 // Go live
 httpServer.listen(config.server.port, () => {
     logger.info('[App] Server running at port', config.server.port);
-    logger.info('[App] Active RC endpoints:', endpoints.map(x => x.identifier));
+    // logger.info('[App] Active RC endpoints:', endpoints.map(x => x.identifier));
 });
 
 // Die

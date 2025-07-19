@@ -2,12 +2,12 @@ import express, { Request, Response, NextFunction } from "express";
 import { router } from "express-file-routing";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import localhostCheck from "./localhostCheck";
 
 export default function createApp(maxCommandLength: number, maxRequests: number, maxRequestsCooldownMs: number) {
     // Initialize server
     const app = express();
-    
-    // Bypass CORS
+    app.use(express.json());
     app.use(cors());
     
     // File-based routing
@@ -22,14 +22,13 @@ export default function createApp(maxCommandLength: number, maxRequests: number,
         next();
     });
 
-    // Allow only GET
-    app.use((req: Request, res: Response, next: NextFunction): void => {
-        if (req.method !== 'GET') {
-            res.status(401).send("HTTP method not allowed");
-            return;
+    // Limit access to /api/commands/* to localhost
+    app.use((req: Request, res: Response, next: NextFunction) => {
+        if (req.path.includes("commands") && req.method !== "POST") { 
+            localhostCheck(req, res, next);
         }
         next();
-    });
+    })
     
     // Limit rate
     app.use(rateLimit({
