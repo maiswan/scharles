@@ -48,6 +48,7 @@ createCommandLineHandler(commandTx);
 // endpoints.push(createHttpGetHandler(commandTx, app, commandStore));
 
 // Go live
+logger.info("[App] Starting in", __dirname);
 httpServer.listen(config.server.port, () => {
     logger.info('[App] Server running at port', config.server.port);
     // logger.info('[App] Active RC endpoints:', endpoints.map(x => x.identifier));

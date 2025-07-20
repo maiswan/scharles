@@ -3,10 +3,10 @@ import { config, logger } from "../app";
 import path from "path";
 
 const sendFile = (res: Response, imagePath: string) => {
-    const options = path.isAbsolute(imagePath) ? {} : { root: `$// {__dirname}/../../` };
-    
-    logger.debug('[/image] TX', imagePath)
-    res.sendFile(imagePath, options, (error) => {
+    const absolutePath = path.resolve(__dirname, imagePath);
+
+    logger.debug('[/image] TX', absolutePath)
+    res.sendFile(absolutePath, {}, (error) => {
         if (!error) { return; }
 
         logger.error('[/image] TX error', error);
