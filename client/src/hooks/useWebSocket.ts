@@ -5,34 +5,38 @@ import { CommandAPI, useCommandBus } from './CommandBus';
 // Singletons
 let socket: WebSocket | null = null;
 let clientId = -1;
+let reconnectInterval: NodeJS.Timeout | undefined = undefined;
 
 function initWebSocket(server: string, logger: ReturnType<typeof useLogger>, dispatchCommand: (commandAPI: CommandAPI) => void) {
-    if (socket) {
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
         return; // WebSocket is already initialized
     }
 
     socket = new WebSocket(server);
+    logger.info(`[WebSocket] Initializing connection to ${server}`);
 
     socket.onopen = () => {
-        logger.info('[WebSocket] Connected');
+        logger.info(`[WebSocket] Connected to ${server}`);
+        clearInterval(reconnectInterval);
     };
 
     socket.onclose = () => {
-        logger.info('[WebSocket] Disconnected');
+        logger.info('[WebSocket] Connection closed');
+        if (reconnectInterval) { return; } // Already set up for reconnection
 
-        setTimeout(() => {
-            logger.info('[WebSocket] Attempting to reconnect...');
+        reconnectInterval = setInterval(() => {
+            logger.info("[WebSocket] Attempting reconnection");
             initWebSocket(server, logger, dispatchCommand);
         }, 5000); // Retry after 5 seconds
     };
 
     socket.onerror = (error) => {
-        logger.error('[WebSocket] Error:', error);
+        logger.error('[WebSocket] Error', error);
     };
 
     function respond(command: Command, success: boolean, data: unknown | null = null) {
         if (socket?.readyState !== WebSocket.OPEN) {
-            logger.warn('[WebSocket] Not connected, unable to respond');
+            logger.warn('[WebSocket] Unable to respond as WebSocket is not open');
             return;
         }
 
