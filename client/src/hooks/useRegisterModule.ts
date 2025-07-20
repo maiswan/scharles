@@ -55,7 +55,7 @@ export function useRegisterModule(
         isDebug: () => isDebug,
         isDebugging: () => isDebug, // backward compatibility
         ...api,
-    }), []);
+    }), [isEnabled, isDebug]);
 
     useEffect(() => {
         register({ identifier, methods });

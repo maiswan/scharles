@@ -15,7 +15,7 @@ const Noise: React.FC = () => {
     const identifier = "noise";
     const state = useRegisterModule(identifier, { set });
 
-    if (!state.isEnabled) { return; }
+    if (!state.isEnabled()) { return; }
     return (
         <>
             <div className="fullscreen bg-repeat transition-opacity duration-500" style={{ backgroundImage: `url(${image}`, opacity: `${opacity}` }} />

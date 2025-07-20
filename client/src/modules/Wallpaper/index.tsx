@@ -77,7 +77,7 @@ const Wallpaper: React.FC = () => {
     const state = useRegisterModule(identifier, { set, next });
     const logger = useLogger();
 
-    if (!state.isEnabled) { return; }
+    if (!state.isEnabled()) { return; }
     return (
         <>
             <img src={bottomImage} className="fullscreen object-cover object-top"></img>

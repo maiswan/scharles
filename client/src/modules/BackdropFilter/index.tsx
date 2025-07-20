@@ -27,7 +27,7 @@ const BackdropFilter: React.FC = () => {
     const identifier = "backdropFilter";
     const state = useRegisterModule(identifier, { set });
 
-    if (!state.isEnabled) { return; }
+    if (!state.isEnabled()) { return; }
     return (
         <>
             <div className="fullscreen transition-all duration-500" style={{ backdropFilter: cssFilters }} />
