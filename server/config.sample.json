@@ -5,7 +5,8 @@
 			"maxRequests": 2,
 			"cooldownMs": 1000
 		},
-		"maxCommandLength": 128
+		"maxCommandLength": 128,
+		"forceServeIncompatibleClients": false
 	},
 	"modules": {
 		"wallpaper": {

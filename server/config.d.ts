@@ -7,6 +7,7 @@ export interface ServerConfig {
     port: number,
     rateLimit: RateLimitConfig,
     maxCommandLength: number,
+    forceServeIncompatibleClients: boolean,
 }
 
 export interface RateLimitConfig {

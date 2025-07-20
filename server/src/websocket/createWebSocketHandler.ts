@@ -5,8 +5,11 @@ import { Command, CommandRequest, CommandResponse } from "../../../shared/comman
 import { randomUUID } from "crypto";
 import { logger } from "../app";
 import { CommandStore } from "../createCommandStore";
+import PackageJson from "../../package.json";
+import { INCOMPATIBLE_VERSION } from "../../../shared/codes";
 
 export type WebSocketHandler = ReturnType<typeof createWebSocketHandler>;
+const serverVersion = PackageJson.version;
 
 export function createWebSocketHandler(httpServer: Server, config: Config, commandStore: CommandStore) {
     const clients: Record<number, WebSocket> = {};
@@ -19,8 +22,8 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
     }
 
     function createCommand(request: CommandRequest): Command {
-        return { 
-            commandId: randomUUID(), 
+        return {
+            commandId: randomUUID(),
             module: request.module,
             action: request.action,
             parameters: request.parameters
@@ -28,7 +31,7 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
     }
 
     function send(clientId: number, command: Command) {
-        if (!(clientId in clients)) { 
+        if (!(clientId in clients)) {
             logger.warn("[webSocketHandler] Client", clientId, "does not exist");
             return;
         }
@@ -44,7 +47,7 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
 
         logger.debug("[webSocketHandler] TX", command);
         send(request.clientIds[0], command);
-        
+
         return command.commandId;
     }
 
@@ -61,40 +64,54 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
     function broadcast(request: CommandRequest) {
         const everyone = Object.keys(clients).map(Number);
         request.clientIds = everyone;
-        
+
         return multicast(request);
     }
 
-    function initializeClient(ws: WebSocket) {
+    function initializeClient(ws: WebSocket, request: Request) {
         const id = getUniqueId();
         clients[id] = ws;
-        logger.info(`[webSocketHandler] Client ${id} connected`);
 
-        unicast({ clientIds: [id], module: "self", action: "set", parameters: ["clientId", id]});
+        // Check client version
+        const searchParams = new URLSearchParams(request.url.substring(1)); // remove leading "/"
+        const clientVersion = searchParams.get("version");
+        const clientMajorVersion = clientVersion?.split(".")[0];
+        const serverMajorVersion = serverVersion.split(".")[0];
 
+        if (clientMajorVersion !== serverMajorVersion && !config.server.forceServeIncompatibleClients) {
+            logger.warn(`[webSocketHandler] Refusing connection: client ${id} is version ${clientVersion}, but server is ${serverVersion}`);
+            ws.close(INCOMPATIBLE_VERSION, `Migrate to ${serverVersion} or enable forceServerIncompatibleClients in server settings`);
+            return;
+        }
+
+        // Assign clientId to client
+        logger.info(`[webSocketHandler] Client ${id} of version ${clientVersion} connected`);
+        unicast({ clientIds: [id], module: "self", action: "set", parameters: ["clientId", id] });
+
+        // Pass config
         Object.keys(config.modules).forEach(module => {
             const settings = config.modules[module].public;
             const keys = settings["data"];
 
             Object.keys(keys).forEach(key => {
                 const value = keys[key];
-                unicast({ clientIds: [id], module, action: "set", parameters: [key, value]});
+                unicast({ clientIds: [id], module, action: "set", parameters: [key, value] });
             });
 
             const enableCommand = settings.isEnabled ? "enable" : "disable";
             const enableDebugCommand = settings.isDebug ? "enableDebug" : "disableDebug";
-            unicast({ clientIds: [id], module, action: enableCommand, parameters: []});
-            unicast({ clientIds: [id], module, action: enableDebugCommand, parameters: []});
+            unicast({ clientIds: [id], module, action: enableCommand, parameters: [] });
+            unicast({ clientIds: [id], module, action: enableDebugCommand, parameters: [] });
         });
 
-        ws.addEventListener('message', (event) => {
+        ws.on('message', (event: MessageEvent) => {
             const response = JSON.parse((event.data as Buffer).toString()) as CommandResponse;
 
             logger.debug("[webSocketHandler] RX", response);
             commandStore.addResponse(response);
         })
 
-        ws.addEventListener('close', () => {
+        ws.on('close', () => {
             logger.info(`Client ${id} disconnected`);
             delete clients[id];
         });

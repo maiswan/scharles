@@ -1,6 +1,8 @@
 import { Command, CommandResponse } from '../../../shared/command';
 import { useLogger } from './useLogger';
 import { CommandAPI, useCommandBus } from './CommandBus';
+import packageJson from "../../package.json";
+import { INCOMPATIBLE_VERSION } from "../../../shared/codes";
 
 // Singletons
 let socket: WebSocket | null = null;
@@ -12,16 +14,18 @@ function initWebSocket(server: string, logger: ReturnType<typeof useLogger>, dis
         return; // WebSocket is already initialized
     }
 
-    socket = new WebSocket(server);
+    const serverWithClientVersion = `${server}?version=${packageJson.version}`;
+    socket = new WebSocket(serverWithClientVersion);
     logger.info(`[WebSocket] Initializing connection to ${server}`);
 
     socket.onopen = () => {
-        logger.info(`[WebSocket] Connected to ${server}`);
+        logger.info(`[WebSocket] Connected`);
         clearInterval(reconnectInterval);
     };
 
-    socket.onclose = () => {
-        logger.info('[WebSocket] Connection closed');
+    socket.onclose = (event: CloseEvent) => {
+        logger.info('[WebSocket] Connection closed:', event.reason);
+        if (event.code === INCOMPATIBLE_VERSION) { return; } // do not attempt reconnect 
         if (reconnectInterval) { return; } // Already set up for reconnection
 
         reconnectInterval = setInterval(() => {

@@ -5,7 +5,7 @@ import path from "path";
 const sendFile = (res: Response, imagePath: string) => {
     const options = path.isAbsolute(imagePath) ? {} : { root: `$// {__dirname}/../../` };
     
-    logger.info('[/image] TX', imagePath)
+    logger.debug('[/image] TX', imagePath)
     res.sendFile(imagePath, options, (error) => {
         if (!error) { return; }
 
