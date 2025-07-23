@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { commandStore } from "../../../app"
-import localhostCheck from "../../../localhostCheck";
 
 export const get = (req: Request, res: Response) => {
     const id = req.params["id"];

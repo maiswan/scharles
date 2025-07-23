@@ -34,7 +34,7 @@ export const config = existsSync("config.prod.json")
     : load("config.sample.json");
 
 // Initialize server
-const app = createApp(config.server.maxCommandLength, config.server.rateLimit.maxRequests, config.server.rateLimit.cooldownMs);
+const app = createApp(config.server)
 const httpServer = http.createServer(app);
 
 // Initialize modules

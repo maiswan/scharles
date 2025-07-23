@@ -8,6 +8,8 @@ export interface ServerConfig {
     rateLimit: RateLimitConfig,
     maxCommandLength: number,
     forceServeIncompatibleClients: boolean,
+    apiBaseAllowedHosts: string[],
+    apiFullAllowedHosts: string[],
 }
 
 export interface RateLimitConfig {

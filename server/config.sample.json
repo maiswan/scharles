@@ -6,7 +6,9 @@
 			"cooldownMs": 1000
 		},
 		"maxCommandLength": 128,
-		"forceServeIncompatibleClients": false
+		"forceServeIncompatibleClients": false,
+		"apiBaseAllowedHosts": ["*"],
+		"apiFullAllowedHosts": ["127.0.0.1", "localhost", "::1"]
 	},
 	"modules": {
 		"wallpaper": {
