@@ -10,6 +10,7 @@ const Wallpaper: React.FC = () => {
     const [source, setSource] = useState("");
     const [periodMs, setPeriodMs] = useState(30000);
     const [transitionMs, setTransitionMs] = useState(1000);
+    const isPausedRef = useRef(false);
 
     // Derived
     const [refetch, setRefetch] = useState(0);
@@ -36,10 +37,16 @@ const Wallpaper: React.FC = () => {
         }
     }, []);
 
+    const pause = useCallback(() => isPausedRef.current = true, []);
+    const unpause = useCallback(() => isPausedRef.current = false, []);
+    const isPaused = useCallback(() => isPausedRef.current, []);
+
     const next = useCallback(() => setRefetch(prev => prev + 1), []);
 
     const fetchAndCrossFadeImage = useCallback(async () => {
-        if (isTransiting.current || source === "") { return; }
+        if (isTransiting.current) { return; }
+        if (isPausedRef.current) { return; }
+        if (source === "") { return; }
 
         logger.debug(`[wallpaper] Fetching ${source}`);
         isTransiting.current = true;
@@ -74,7 +81,10 @@ const Wallpaper: React.FC = () => {
 
     // Module
     const identifier = "wallpaper";
-    const state = useRegisterModule(identifier, { set, next });
+    const state = useRegisterModule(
+        identifier,
+        { set, next, pause, unpause, isPaused }
+    );
     const logger = useLogger();
 
     if (!state.isEnabled()) { return; }
@@ -86,7 +96,7 @@ const Wallpaper: React.FC = () => {
             {
                 state.isDebug() &&
                 <Debug title={identifier} disableDebug={state.disableDebug}>
-                    <div>{source} {periodMs} {transitionMs} {refetch}</div>
+                    <div>{source} {periodMs} {transitionMs} {refetch} {isPausedRef.current + ""}</div>
                     <div>{bottomImage}</div>
                     <div>{topImage}</div>
                     <div>{isTopImageVisible + ""}</div>
