@@ -105,6 +105,7 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
         });
 
         ws.on('message', (event: MessageEvent) => {
+            if (event.data == null) { return; }
             const response = JSON.parse((event.data as Buffer).toString()) as CommandResponse;
 
             logger.debug("[webSocketHandler] RX", response);
