@@ -6,6 +6,7 @@
         "cors": "^2.8.5",
         "express-file-routing": "^3.0.3",
         "express-rate-limit": "^7.5.0",
+        "ip-matching": "^2.1.2",
         "tslog": "^4.9.3",
         "ws": "^8.18.1"
     },

@@ -7,8 +7,8 @@
 		},
 		"maxCommandLength": 128,
 		"forceServeIncompatibleClients": false,
-		"apiBaseAllowedHosts": ["*"],
-		"apiFullAllowedHosts": ["127.0.0.1", "localhost", "::1"]
+		"apiBaseAllowedHosts": ["*.*.*.*", "::*"],
+		"apiFullAllowedHosts": ["127.0.0.1", "::*"]
 	},
 	"modules": {
 		"wallpaper": {
