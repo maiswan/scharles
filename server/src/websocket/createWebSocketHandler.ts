@@ -1,4 +1,4 @@
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer, WebSocket, Data } from "ws";
 import { Config } from "../../config";
 import { Server } from "http";
 import { Command, CommandRequest, CommandResponse } from "../../../shared/command";
@@ -104,9 +104,9 @@ export function createWebSocketHandler(httpServer: Server, config: Config, comma
             unicast({ clientIds: [id], module, action: enableDebugCommand, parameters: [] });
         });
 
-        ws.on('message', (event: MessageEvent) => {
-            if (event.data == null) { return; }
-            const response = JSON.parse((event.data as Buffer).toString()) as CommandResponse;
+        ws.on('message', (data: Data) => {
+            if (data == null) { return; }
+            const response = JSON.parse((data as Buffer).toString()) as CommandResponse;
 
             logger.debug("[webSocketHandler] RX", response);
             commandStore.addResponse(response);
