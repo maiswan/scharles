@@ -7,7 +7,7 @@ export default function checkApiAccess(req: Request, res: Response, next: NextFu
     const canAccessBaseApi = apiBaseAllowedHosts.find(x => matches(ip, x));
     const isAccessingFullApi = req.path.includes("commands") && req.method !== "POST";
 
-    const canAccess = !canAccessBaseApi || !canAccessFullApi && isAccessingFullApi;
+    const canAccess = (isAccessingFullApi && canAccessFullApi) || (!isAccessingFullApi && canAccessBaseApi);
 
     if (!canAccess) {
         res.status(403).send();
