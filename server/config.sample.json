@@ -8,7 +8,8 @@
 		"maxCommandLength": 128,
 		"forceServeIncompatibleClients": false,
 		"apiBaseAllowedHosts": ["*.*.*.*", "::*"],
-		"apiFullAllowedHosts": ["127.0.0.1", "::*"]
+		"apiFullAllowedHosts": ["127.0.0.1", "::*"],
+		"maxCommandHistorySaved": 256
 	},
 	"modules": {
 		"wallpaper": {

@@ -1,14 +1,17 @@
 import { type Command, type CommandResponse, type CommandRecord, type CommandRequest, getShortCommandId } from "../../shared/command";
-import { logger } from "./app";
+import { commandStore, logger } from "./app";
 
 export type CommandStore = ReturnType<typeof createCommandStore>;
 
-export function createCommandStore() {
+export function createCommandStore(maxCommandHistorySaved: number) {
     const store = new Map<string, CommandRecord>();
+    const commandIds: string[] = [];
 
     return {
         addRequest(commandId: string, request: CommandRequest): void {
             logger.debug(`[commandStore] Adding command ${getShortCommandId(commandId)}`);
+            
+            commandIds.push(commandId);
             store.set(commandId, {
                 commandId,
                 request,
@@ -16,6 +19,13 @@ export function createCommandStore() {
                 transmitTimestamp: new Date(),
                 receiveTimestamp: null
             });
+
+            // Remove the oldest commands
+            if (commandIds.length <= maxCommandHistorySaved) { return; }
+
+            const oldestCommand = commandIds.shift()!;
+            logger.debug(`[commandStore] Removing oldest command ${getShortCommandId(oldestCommand)}`);
+            store.delete(oldestCommand);
         },
 
         addResponse(response: CommandResponse): boolean {

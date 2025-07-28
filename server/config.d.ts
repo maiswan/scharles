@@ -10,6 +10,7 @@ export interface ServerConfig {
     forceServeIncompatibleClients: boolean,
     apiBaseAllowedHosts: string[],
     apiFullAllowedHosts: string[],
+    maxCommandHistorySaved: number,
 }
 
 export interface RateLimitConfig {

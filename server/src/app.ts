@@ -38,7 +38,7 @@ const app = createApp(config.server)
 const httpServer = http.createServer(app);
 
 // Initialize modules
-export const commandStore = createCommandStore();
+export const commandStore = createCommandStore(config.server.maxCommandHistorySaved);
 const wsHandler = createWebSocketHandler(httpServer, config, commandStore);
 export const commandTx = createCommandTransmitter(wsHandler);
 
