@@ -1,64 +1,44 @@
 import { createWebSocketHandler } from "./websocket/createWebSocketHandler";
-import http from "http";
-import { existsSync, readFileSync } from "fs";
-import { createCommandLineHandler } from "./endpoints/createCommandLineHandler";
-import { Config } from "../config";
+import https from "https";
+import { readFileSync } from "fs";
+import { createCommandLineHandler } from "./commandLineHandler";
 import { createCommandTransmitter } from "./websocket/createCommandTransmitter";
 import { createCommandStore } from "./createCommandStore";
 import createApp from "./createApp";
 import { Logger, ILogObj } from "tslog";
+import { readConfig, readCerts } from "./readConfig";
 
 // Singleton logger instance
 export const logger = new Logger<ILogObj>({
     prettyLogTemplate: "{{yyyy}}.{{mm}}.{{dd}} {{hh}}:{{MM}}:{{ss}}:{{ms}}\t{{logLevelName}}\t",
 });
 
-// Read config
-const load = (path: string): Config => {
-    logger.info('[App] Reading config at', path);
-
-    try {
-        const data = readFileSync(path, 'utf-8');
-        const json = JSON.parse(data);
-        logger.debug('[App] Read config', json);
-        return json as Config;
-    }
-    catch (error) {
-        logger.fatal(error);
-        process.exit(1);
-    }
-}
-
-export const config = existsSync("config.prod.json")
-    ? load("config.prod.json")
-    : load("config.sample.json");
 
 // Initialize server
+export const config = readConfig();
+const certs = readCerts();
+
 const app = createApp(config.server)
-const httpServer = http.createServer(app);
+const httpsServer = https.createServer(certs, app);
 
 // Initialize modules
 export const commandStore = createCommandStore(config.server.maxCommandHistorySaved);
-const wsHandler = createWebSocketHandler(httpServer, config, commandStore);
-export const commandTx = createCommandTransmitter(wsHandler);
+const wssHandler = createWebSocketHandler(httpsServer, config, commandStore);
+export const commandTx = createCommandTransmitter(wssHandler);
 
 createCommandLineHandler(commandTx);
-// const endpoints: Endpoint[] = []
-// endpoints.push(createCommandLineHandler(commandTx));
-// endpoints.push(createHttpGetHandler(commandTx, app, commandStore));
 
 // Go live
 logger.info("[App] Starting in", __dirname);
-httpServer.listen(config.server.port, () => {
-    logger.info('[App] Server running at port', config.server.port);
-    // logger.info('[App] Active RC endpoints:', endpoints.map(x => x.identifier));
+httpsServer.listen(config.server.port, () => {
+    logger.info('[App] HTTPS server running at port', config.server.port);
 });
 
 // Die
 process.on("SIGINT", () => {
     logger.info("[App] Server shutting down");
 
-    httpServer.close(() => {
+    httpsServer.close(() => {
         logger.info(`[App] Port ${config.server.port} is free. Unless Node refuses to die (this has happened before).`);
         process.exitCode = 0;
     });

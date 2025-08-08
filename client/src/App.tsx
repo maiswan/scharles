@@ -3,7 +3,7 @@ import Modules from "./modules/index"
 import { useWebSocket } from "./hooks/useWebSocket";
 
 // Edit here
-const server = "ws://localhost:12024";
+const server = "wss://localhost:12024";
 const modules = ['wallpaper', 'backdropFilter', 'noise', 'ripple', 'self'];
 
 const App: React.FC = () => {

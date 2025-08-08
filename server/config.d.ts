@@ -8,14 +8,21 @@ export interface ServerConfig {
     rateLimit: RateLimitConfig,
     maxCommandLength: number,
     forceServeIncompatibleClients: boolean,
-    apiBaseAllowedHosts: string[],
-    apiFullAllowedHosts: string[],
+    keys: KeyConfig
     maxCommandHistorySaved: number,
 }
 
 export interface RateLimitConfig {
     maxRequests: number,
     cooldownMs: number,
+}
+
+export interface KeyConfig {
+    clients: string[],
+    controllers: string[],
+    admins: string[],
+    jwtSecret: string,
+    jwtExpiration: string,
 }
 
 export interface ModuleConfig {

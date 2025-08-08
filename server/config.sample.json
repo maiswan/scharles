@@ -7,9 +7,13 @@
 		},
 		"maxCommandLength": 128,
 		"forceServeIncompatibleClients": false,
-		"apiBaseAllowedHosts": ["*.*.*.*", "::*"],
-		"apiFullAllowedHosts": ["127.0.0.1", "::*"],
-		"maxCommandHistorySaved": 256
+		"maxCommandHistorySaved": 256,
+		"keys": {
+			"controllers": [],
+			"admins": [],
+			"jwtSecret": "",
+			"jwtExpiration": "1h"
+		}
 	},
 	"modules": {
 		"wallpaper": {
@@ -17,7 +21,7 @@
 				"isEnabled": true,
 				"isDebug": false,
 				"data": {
-					"source": "http://localhost:12024/api/image",
+					"source": "https://localhost:12024/api/v3/image",
 					"periodMs": 5000,
 					"transitionMs": 1000
 				}

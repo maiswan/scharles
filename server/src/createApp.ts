@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from "express";
 import { router } from "express-file-routing";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import checkApiAccess from "./checkApiAccess";
 import { ServerConfig } from "../config";
 
 export default function createApp(config: ServerConfig) {
@@ -22,11 +21,6 @@ export default function createApp(config: ServerConfig) {
         }
         next();
     });
-
-    // Limit API access
-    app.use((req: Request, res: Response, next: NextFunction) => {
-        checkApiAccess(req, res, next, config.apiFullAllowedHosts, config.apiBaseAllowedHosts);
-    })
     
     // Limit rate
     app.use(rateLimit({
