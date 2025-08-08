@@ -20,7 +20,7 @@ export const post = (req: Request, res: Response) => {
     if (role == null && config.server.keys.admins.includes(apiKey)) { role = "admin"; }
 
     if (!role) {
-        logger.debug(`[JWT] Invalid API key ${apiKey}`);
+        logger.debug(`[JWT] Invalid API key ending in ${apiKey.slice(-4)}`);
         return res.status(401).json({ error: "Invalid API key" });
     }
 
@@ -30,6 +30,6 @@ export const post = (req: Request, res: Response) => {
     };
 
     const token = jwt.sign(jwtPayload, config.server.keys.jwtSecret, { expiresIn: config.server.keys.jwtExpiration } as SignOptions);
-    logger.info(`[JWT] Authenicated ${role} with key ${apiKey}`);
+    logger.info(`[JWT] Authenicated ${role} with key ending in ${apiKey.slice(-4)}`);
     res.json({ token });
 }
