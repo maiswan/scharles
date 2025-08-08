@@ -13,15 +13,14 @@ export const get = [
             return;
         }
 
-        const imagePath = paths[Math.floor(Math.random() * paths.length)];
-        const options = path.isAbsolute(imagePath) ? {} : { root: `$// {__dirname}/../../` };
+        const imagePath = path.resolve(paths[Math.floor(Math.random() * paths.length)]);
 
         logger.debug('[/image] TX', imagePath)
-        res.sendFile(imagePath, options, (error) => {
+        res.sendFile(imagePath, (error) => {
             if (!error) { return; }
 
             logger.error('[/image] TX error', error);
-            res.status(500).json({ error });
+            res.status(500).json(error);
         });
     }
 ];
