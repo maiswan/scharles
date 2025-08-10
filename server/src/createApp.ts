@@ -1,10 +1,10 @@
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import { router } from "express-file-routing";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import { ServerConfig } from "../config";
+import Config from "../config";
 
-export default function createApp(config: ServerConfig) {
+export default function createApp(config: Config) {
     // Initialize server
     const app = express();
     app.use(cors());
@@ -13,16 +13,15 @@ export default function createApp(config: ServerConfig) {
     (async () => { app.use("/", await router()); })();
     
     // Limit body length
-    app.use(express.json({ limit: config.maxCommandLength }));
+    const limits = config.server.rateLimit;
+
+    app.use(express.json({ limit: limits.maxRequestLength }));
     app.use(express.urlencoded({ extended: true }));
     
     // Limit rate
     app.use(rateLimit({
-        windowMs: config.rateLimit.cooldownMs,
-        limit: config.rateLimit.maxRequests,
-        standardHeaders: true,
-        legacyHeaders: false,
-        message: { error: "Too many requests." }
+        windowMs: limits.cooldownMs,
+        limit: limits.maxRequests,
     }));
 
     return app;

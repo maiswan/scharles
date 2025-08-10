@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from "fs";
-import { Config } from "../config";
+import Config from "../config";
 import { Logger, ILogObj } from "tslog";
 
 const configPaths = ["config.dev.json", "config.prod.json", "config.sample.json", "config.json"];
