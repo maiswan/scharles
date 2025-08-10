@@ -3,8 +3,8 @@ import { Config } from "../config";
 import { Logger, ILogObj } from "tslog";
 
 const configPaths = ["config.dev.json", "config.prod.json", "config.sample.json", "config.json"];
-const crtPaths = ["certs/server.dev.crt", "certs/server.prod.crt", "cert/server.crt"];
-const keyPaths = ["certs/server.dev.key", "certs/server.prod.key", "cert/server.key"];
+const crtPaths = ["certs/server.dev.crt", "certs/server.prod.crt", "certs/server.crt"];
+const keyPaths = ["certs/server.dev.key", "certs/server.prod.key", "certs/server.key"];
 
 const readFirstExistingFile = (logger: Logger<ILogObj>, logDescription: string, paths: string[], overridePath: string | undefined) => {
     

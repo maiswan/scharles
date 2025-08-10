@@ -23,6 +23,8 @@ export interface KeyConfig {
     admins: string[],
     jwtSecret: string,
     jwtExpiration: string,
+    crtPath: string,
+    keyPath: string,
 }
 
 export interface ModuleConfig {

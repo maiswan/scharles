@@ -18,7 +18,7 @@ logger.info("[App] Starting in", __dirname);
 
 // Initialize server
 const config = readConfig(logger);
-const certs = readCerts(logger);
+const certs = readCerts(logger, config.server.keys.crtPath, config.server.keys.keyPath);
 
 const app = createApp(config.server);
 const httpsServer = https.createServer(certs, app);
