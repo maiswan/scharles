@@ -1,45 +1,50 @@
 import { createWebSocketHandler } from "./websocket/createWebSocketHandler";
 import https from "https";
-import { readFileSync } from "fs";
 import { createCommandLineHandler } from "./commandLineHandler";
 import { createCommandTransmitter } from "./websocket/createCommandTransmitter";
 import { createCommandStore } from "./createCommandStore";
 import createApp from "./createApp";
 import { Logger, ILogObj } from "tslog";
 import { readConfig, readCerts } from "./readConfig";
+import Package from "../package.json"
 
 // Singleton logger instance
-export const logger = new Logger<ILogObj>({
+const logger = new Logger<ILogObj>({
     prettyLogTemplate: "{{yyyy}}.{{mm}}.{{dd}} {{hh}}:{{MM}}:{{ss}}:{{ms}}\t{{logLevelName}}\t",
 });
 
+logger.info("[App]", Package.name, Package.version);
+logger.info("[App] Starting in", __dirname);
 
 // Initialize server
-export const config = readConfig();
-const certs = readCerts();
+const config = readConfig(logger);
+const certs = readCerts(logger);
 
-const app = createApp(config.server)
+const app = createApp(config.server);
 const httpsServer = https.createServer(certs, app);
 
 // Initialize modules
-export const commandStore = createCommandStore(config.server.maxCommandHistorySaved);
-const wssHandler = createWebSocketHandler(httpsServer, config, commandStore);
-export const commandTx = createCommandTransmitter(wssHandler);
-
+const commandStore = createCommandStore(logger, config.server.maxCommandHistorySaved);
+const wssHandler = createWebSocketHandler(logger, httpsServer, config, commandStore);
+const commandTx = createCommandTransmitter(wssHandler);
 createCommandLineHandler(commandTx);
 
+app.locals.logger = logger;
+app.locals.config = config;
+app.locals.commandStore = commandStore;
+app.locals.commandTx = commandTx;
+
 // Go live
-logger.info("[App] Starting in", __dirname);
 httpsServer.listen(config.server.port, () => {
     logger.info('[App] HTTPS server running at port', config.server.port);
 });
 
 // Die
 process.on("SIGINT", () => {
-    logger.info("[App] Server shutting down");
+    logger.info("[App] Shutting down");
 
     httpsServer.close(() => {
-        logger.info(`[App] Port ${config.server.port} is free. Unless Node refuses to die (this has happened before).`);
+        logger.info(`[App] Port ${config.server.port} is free, unless Node refuses to die (this has happened before).`);
         process.exitCode = 0;
     });
 })

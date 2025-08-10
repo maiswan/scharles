@@ -1,6 +1,5 @@
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { config } from "../../app";
 
 export type Role = /* "client" | */ "controller" | "admin";
 
@@ -20,6 +19,7 @@ const authenticateJwt = (requiredMinimumRole: Role) => async (req: Request, res:
         return res.status(401).json({ error: "Missing or invalid Authorization header" });
     }
 
+    const config = req.app.locals.config;
     const token = authHeader?.split(" ")[1];
 
     try {
@@ -32,11 +32,9 @@ const authenticateJwt = (requiredMinimumRole: Role) => async (req: Request, res:
             return;
         }
 
-        return res.status(403).json({ error: "Invalid token" });
+    } catch { }
 
-    } catch {
-        return res.status(403).json({ error: "Invalid token" });
-    }
+    return res.status(403).json({ error: "Invalid token" });
 }
 
 export default authenticateJwt;

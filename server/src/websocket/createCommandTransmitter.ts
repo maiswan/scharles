@@ -1,6 +1,5 @@
-import { logger } from "../app";
 import { WebSocketHandler } from "./createWebSocketHandler";
-import { Command, CommandRequest } from "../../../shared/command";
+import { CommandRequest } from "../../../shared/command";
 
 export type CommandTransmitter = ReturnType<typeof createCommandTransmitter>;
 

@@ -1,9 +1,9 @@
-import { type Command, type CommandResponse, type CommandRecord, type CommandRequest, getShortCommandId } from "../../shared/command";
-import { commandStore, logger } from "./app";
+import { ILogObj, Logger } from "tslog";
+import { type CommandResponse, type CommandRecord, type CommandRequest, getShortCommandId } from "../../shared/command";
 
 export type CommandStore = ReturnType<typeof createCommandStore>;
 
-export function createCommandStore(maxCommandHistorySaved: number) {
+export function createCommandStore(logger: Logger<ILogObj>, maxCommandHistorySaved: number) {
     const store = new Map<string, CommandRecord>();
     const commandIds: string[] = [];
 
@@ -23,7 +23,9 @@ export function createCommandStore(maxCommandHistorySaved: number) {
             // Remove the oldest commands
             if (commandIds.length <= maxCommandHistorySaved) { return; }
 
-            const oldestCommand = commandIds.shift()!;
+            const oldestCommand = commandIds.shift();
+            if (!oldestCommand) { return; }
+
             logger.debug(`[commandStore] Removing oldest command ${getShortCommandId(oldestCommand)}`);
             store.delete(oldestCommand);
         },

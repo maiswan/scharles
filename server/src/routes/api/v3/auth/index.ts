@@ -1,12 +1,12 @@
-import { config, logger } from "../../../../app";
 import { Request, Response } from "express";
 import jwt, { SignOptions } from "jsonwebtoken";
-import authenticateJwt, { JwtRolePaylaod, Role } from "../../../../middlewares/jwt";
+import { JwtRolePaylaod, Role } from "../../../../middlewares/jwt";
 
 // Allow users to authenticate themselves with an API key
 // Return them a JWT on success
 export const post = (req: Request, res: Response) => {
     const { apiKey } = req.body;
+    const { logger, config } = req.app.locals;
 
     if (!apiKey) {
         logger.debug("[JWT] No API key to authenticate");

@@ -3,15 +3,15 @@ import { Config } from "../../config";
 import { Server } from "http";
 import { Command, CommandRequest, CommandResponse } from "../../../shared/command";
 import { randomUUID } from "crypto";
-import { logger } from "../app";
 import { CommandStore } from "../createCommandStore";
 import PackageJson from "../../package.json";
 import { INCOMPATIBLE_VERSION } from "../../../shared/codes";
+import { Logger, ILogObj } from "tslog";
 
 export type WebSocketHandler = ReturnType<typeof createWebSocketHandler>;
 const serverVersion = PackageJson.version;
 
-export function createWebSocketHandler(httpServer: Server, config: Config, commandStore: CommandStore) {
+export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Server, config: Config, commandStore: CommandStore) {
     const clients: Record<number, WebSocket> = {};
     const server = new WebSocketServer({ server: httpServer });
 

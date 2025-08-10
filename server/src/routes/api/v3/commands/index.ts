@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
-import { commandStore, commandTx } from "../../../../app"
 import { CommandRequest } from "../../../../../../shared/command";
 import authenticateJwt from "../../../../middlewares/jwt";
 
 export const get = [
     authenticateJwt("admin"),
     (req: Request, res: Response) => {
+        const { commandStore } = req.app.locals;
         const commands = commandStore.getAll();
         res.json(commands);
     }
@@ -14,6 +14,7 @@ export const get = [
 export const del = [
     authenticateJwt("admin"),
     (req: Request, res: Response) => {
+        const { commandStore } = req.app.locals;
         commandStore.deleteAll();
         res.status(200).send();
     }
@@ -27,6 +28,8 @@ export const post = [
             res.status(422).send();
             return;
         };
+
+        const { commandTx, commandStore } = req.app.locals;
 
         const id = commandTx.transmitFromCommandRequest(request);
         setTimeout(() => {

@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import path from "path";
-import { config, logger } from "../../../app";
 
 export const get = [
     //authenticateJwt("client"),
     (req: Request, res: Response) => {
+        const { config, logger } = req.app.locals;
         const paths = config.modules['wallpaper'].private?.data.paths as string[];
 
         if (!paths) {
