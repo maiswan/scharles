@@ -2,19 +2,24 @@
 	"server": {
 		"port": 12024,
 		"rateLimit": {
+			"cooldownMs": 1000,
 			"maxRequests": 2,
-			"cooldownMs": 1000
+			"maxRequestLength": 128
 		},
-		"maxCommandLength": 128,
 		"forceServeIncompatibleClients": false,
 		"maxCommandHistorySaved": 256,
-		"keys": {
-			"controllers": [],
-			"admins": [],
-			"jwtSecret": "",
-			"jwtExpiration": "1h",
-			"crtPath": "",
-			"keyPath": ""
+		"authentication": {
+			"controllers": {
+				"keys": [],
+				"jwtExpiration": "1h"
+			},
+			"admins": {
+				"keys": [],
+				"jwtExpiration": "15m"
+			},
+			"jwtSecret": "xxxxxx",
+			"crtPath": "xxx.crt",
+			"keyPath": "xxx.key"
 		}
 	},
 	"modules": {
