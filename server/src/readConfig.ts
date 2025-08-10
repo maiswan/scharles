@@ -1,40 +1,34 @@
-import { readFileSync, existsSync, readFile } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { Config } from "../config";
-import { logger } from "./app";
+import { Logger, ILogObj } from "tslog";
 
-const load = (path: string): Config => {
-    logger.info('[App] Reading config at', path);
+const configPaths = ["config.dev.json", "config.prod.json", "config.sample.json", "config.json"];
+const crtPaths = ["certs/server.dev.crt", "certs/server.prod.crt", "cert/server.crt"];
+const keyPaths = ["certs/server.dev.key", "certs/server.prod.key", "cert/server.key"];
 
-    try {
-        const data = readFileSync(path, 'utf-8');
-        const json = JSON.parse(data);
-        logger.debug('[App] Read config', json);
-        return json as Config;
-    }
-    catch (error) {
-        logger.fatal(error);
-        process.exit(1);
-    }
-}
-
-const paths = ["config.dev.json", "config.prod.json", "config.sample.json"];
-
-export const readConfig = (path?: string) => {
-    if (path) { return load(path); }
+const readFirstExistingFile = (logger: Logger<ILogObj>, logDescription: string, paths: string[], overridePath: string | undefined) => {
+    
+    if (overridePath) { paths.unshift(overridePath); }
 
     for (const path of paths) {
-        if (existsSync(path)) { return load(path); }
+        if (!existsSync(path)) { continue; }
+
+        logger.info(`[App] Reading ${logDescription} at ${path}`);
+        return readFileSync(path, 'utf-8');
     }
 
-    throw Error("No config file");
+    logger.fatal(`[App] No ${logDescription} available`);
+    process.exit(1);
 }
 
-export const readCerts = (crt?: string, key?: string) => {
-    crt ??= "./certs/server.crt";
-    key ??= "./certs/server.key";
+export const readConfig = (logger: Logger<ILogObj>, path?: string) => {
+    const data = readFirstExistingFile(logger, "config", configPaths, path);
+    return JSON.parse(data) as Config;
+}
 
-    return {
-        cert: readFileSync("./certs/server.crt"),
-        key: readFileSync("./certs/server.key")
-    }
+export const readCerts = (logger: Logger<ILogObj>, crtPath?: string, keyPath?: string) => {
+    const cert = readFirstExistingFile(logger, ".crt", crtPaths, crtPath);
+    const key = readFirstExistingFile(logger, ".key", keyPaths, keyPath);
+
+    return { cert, key };
 }
