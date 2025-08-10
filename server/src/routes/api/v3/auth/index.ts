@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import jwt, { SignOptions } from "jsonwebtoken";
-import { JwtRolePaylaod, Role } from "../../../../middlewares/jwt";
+import authenticateJwt, { JwtRolePaylaod, Role } from "../../../../middlewares/jwt";
 
 // Allow users to authenticate themselves with an API key
 // Return them a JWT on success
@@ -31,5 +31,14 @@ export const post = (req: Request, res: Response) => {
 
     const token = jwt.sign(jwtPayload, config.server.keys.jwtSecret, { expiresIn: config.server.keys.jwtExpiration } as SignOptions);
     logger.info(`[JWT] Authenicated ${role} with key ending in ${apiKey.slice(-4)}`);
-    res.json({ token });
+    res.status(200).json({ token });
 }
+
+// Debugging endpoint for users to test if they're authenticated
+// If so, return what we know about them
+export const get = [
+    authenticateJwt("controller"),
+    (req: Request, res: Response) => {
+        res.status(200).json((req as any).user);
+    }
+];
