@@ -15,3 +15,12 @@ body {
 h1 {
     @apply font-bold text-lg;
 }
+
+.buttonBase {
+    @apply px-2 py-1 w-full bg-stone-50 rounded-md border-1 border-stone-500;
+}
+
+button {
+    @apply px-2 py-1 w-full bg-stone-50 rounded-md border-1 border-stone-500;
+    @apply px-4 hover:bg-stone-300/50 transition-colors duration-200;
+}

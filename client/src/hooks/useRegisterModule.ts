@@ -24,8 +24,10 @@ export function useRegisterModule(
     }, []);
 
     const toggle = useCallback(() => {
-        setIsEnabled((prev) => !prev);
-        logger.info(`[useModule] ${identifier} toggled to ${!isEnabled ? 'enabled' : 'disabled'}`);
+        setIsEnabled((prev) => {
+            logger.info(`[useModule] ${identifier} toggled to ${!prev ? 'enabled' : 'disabled'}`);
+            return !prev
+        });
     }, []);
 
     const enableDebug = useCallback(() => {
@@ -39,8 +41,10 @@ export function useRegisterModule(
     }, []);
 
     const toggleDebug = useCallback(() => {
-        setIsDebug((prev) => !prev);
-        logger.info(`[useModule] ${identifier} toggled to ${!isDebug ? 'enabled' : 'disabled'}`);
+        setIsDebug((prev) => {
+            logger.info(`[useModule] ${identifier} debugging toggled to ${!prev ? 'enabled' : 'disabled'}`);
+            return !prev
+        });
     }, []);
 
     // The final, public-facing API has default implementations which can be overriden by modules
