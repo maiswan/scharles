@@ -17,9 +17,9 @@
 				"keys": [],
 				"jwtExpiration": "15m"
 			},
-			"jwtSecret": "xxxxxx",
-			"crtPath": "xxx.crt",
-			"keyPath": "xxx.key"
+			"jwtSecret": "",
+			"crtPath": "certs/server.crt",
+			"keyPath": "certs/server.key"
 		}
 	},
 	"modules": {
