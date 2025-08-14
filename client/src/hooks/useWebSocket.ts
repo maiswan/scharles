@@ -15,8 +15,13 @@ function initWebSocket(server: string, logger: ReturnType<typeof useLogger>, dis
     }
 
     const serverWithClientVersion = `${server}?version=${packageJson.version}`;
-    socket = new WebSocket(serverWithClientVersion);
-    logger.info(`[WebSocket] Initializing connection to ${server}`);
+    try {
+        socket = new WebSocket(serverWithClientVersion);
+        logger.info(`[WebSocket] Initializing connection to ${server}`);
+    } catch (error) {
+        logger.fatal("[WebSocket] Cannot initialize connection", error);
+        return;
+    }
 
     socket.onopen = () => {
         logger.info(`[WebSocket] Connected`);
