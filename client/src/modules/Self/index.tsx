@@ -59,13 +59,13 @@ const Self: React.FC = () => {
 
     return (
         <>
-            <title>{`scharles-client/${clientId}`}</title>
+            <title>{`${PackageJson.name}/${clientId}`}</title>
             {
                 state.isDebugging() &&
                 <div className="fullscreen flex justify-center items-center">
                     <div className="w-full max-w-2xl m-4 z-100">
                         <header className="flex flex-row gap-4 justify-between font-semibold text-lg items-center bg-stone-300 px-4 py-2">
-                            <h1>scharles-client {PackageJson.version}</h1>
+                            <h1>{PackageJson.name} {PackageJson.version}</h1>
                             <button className="max-w-16" onClick={close}>&#x2715;</button>
                         </header>
                         <div className="flex flex-col gap-4 bg-white p-4">

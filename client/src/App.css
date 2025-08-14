@@ -17,10 +17,10 @@ h1 {
 }
 
 .buttonBase {
-    @apply px-2 py-1 w-full bg-stone-50 rounded-md border-1 border-stone-500;
+    @apply px-2 py-1 w-full bg-stone-50/10 rounded-md border-1 border-stone-500;
 }
 
 button {
-    @apply px-2 py-1 w-full bg-stone-50 rounded-md border-1 border-stone-500;
+    @apply px-2 py-1 w-full bg-stone-200 rounded-md border-1 border-stone-500 cursor-pointer;
     @apply px-4 hover:bg-stone-300/50 transition-colors duration-200;
 }
