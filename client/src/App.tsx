@@ -2,22 +2,14 @@ import "./App.css";
 import Modules from "./modules/index"
 import { useWebSocket } from "./hooks/useWebSocket";
 import PackageJson from "../package.json"
-
-export const localStorageServerIdentifier = "maiswan/scharles-client.server";
-export const localStorageModulesIdentifier = "maiswan/scharles-client.modules";
-
-const server = localStorage.getItem(localStorageServerIdentifier) ?? "";
-
-const builtInModules = ['wallpaper', 'backdropFilter', 'noise', 'ripple', 'self'];
-const localStorageModules = localStorage.getItem(localStorageModulesIdentifier);
-if (!localStorageModules) {
-    localStorage.setItem(localStorageModulesIdentifier, JSON.stringify(builtInModules));
-}
-const moduleNames: string[] = localStorageModules ? JSON.parse(localStorageModules) : builtInModules;
-
-const importedModuleIdentifiers = Object.keys(Modules); 
+import useConfiguration from "./hooks/useConfiguration";
 
 const App: React.FC = () => {
+    const { getConfig } = useConfiguration();
+
+    const server = getConfig("maiswan/scharles-client.server");
+    const modules: string[] = JSON.parse(getConfig("maiswan/scharles-client.modules"));
+
     useWebSocket(server);
 
     return (
@@ -28,9 +20,9 @@ const App: React.FC = () => {
                 <p>Press <kbd className="buttonBase">CTRL</kbd><span className="mx-1">+</span><kbd className="buttonBase">,</kbd> to show the settings panel.</p>
             </div>
             {
-                moduleNames.map(x => {
+                modules.map(x => {
                     const tsxName = x.charAt(0).toUpperCase() + x.substring(1);
-                    if (!importedModuleIdentifiers.includes(tsxName)) { return null; }
+                    if (!Object.keys(Modules).includes(tsxName)) { return null; }
 
                     const Module = Modules[tsxName as keyof typeof Modules];
                     return <Module key={x}/>;

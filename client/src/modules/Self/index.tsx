@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRegisterModule } from "../../hooks/useRegisterModule";
 import PackageJson from "../../../package.json";
-import { localStorageModulesIdentifier, localStorageServerIdentifier } from "../../App";
+import useConfiguration from "../../hooks/useConfiguration";
 
 const Self: React.FC = () => {
     // Plugin
     const [clientId, setClientId] = useState("-1");
-    const [server, setServer] = useState("");
-    const [modules, setModules] = useState("");
-
+    
     const set = useCallback((key: string, value: string) => {
         if (key !== "clientId") { return `Unknown key ${key}`; }
         setClientId(value);
@@ -19,15 +17,13 @@ const Self: React.FC = () => {
     const state = useRegisterModule(identifier, { set });
 
     // Initialize
-    useEffect(() => {
-        const server = localStorage.getItem(localStorageServerIdentifier) ?? "";
-        const modules = localStorage.getItem(localStorageModulesIdentifier) ?? "";
-        setServer(server);
-        setModules(modules);
+    const { getConfig, setConfig } = useConfiguration();
+    const [server, setServer] = useState(getConfig("maiswan/scharles-client.server"));
+    const [modules, setModules] = useState(getConfig("maiswan/scharles-client.modules"));
 
+    useEffect(() => {
         // Show panel if no server has been specified
         if (!server) { state.enableDebug(); }
-
     }, []);
 
     // Ctrl+, to toggle
@@ -49,13 +45,13 @@ const Self: React.FC = () => {
     }, [state]);
 
     const reload = useCallback(() => {
-        localStorage.setItem(localStorageServerIdentifier, server);
+        setConfig("maiswan/scharles-client.server", server);
 
         const modulesArray = modules.replace(/\W/g, " ").split(" ").filter(Boolean);
-        localStorage.setItem(localStorageModulesIdentifier, JSON.stringify(modulesArray));
+        setConfig("maiswan/scharles-client.modules", JSON.stringify(modulesArray));
 
         location.reload();
-    }, [modules, server]);
+    }, [modules, server, setConfig]);
 
     return (
         <>
