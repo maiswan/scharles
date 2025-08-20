@@ -2,11 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useRegisterModule } from "../../hooks/useRegisterModule";
 import PackageJson from "../../../package.json";
 import { useConfigurationContext } from "../../hooks/ConfigurationContext";
+import { useCommandBus } from "../../hooks/CommandBus";
+import { Command } from "../../../../shared/command";
 
 const Self: React.FC = () => {
     // Plugin
     const [clientId, setClientId] = useState("-1");
-    
+    const { dispatchCommand } = useCommandBus();
+
     const set = useCallback((key: string, value: string) => {
         if (key !== "clientId") { return `Unknown key ${key}`; }
         setClientId(value);
@@ -16,15 +19,35 @@ const Self: React.FC = () => {
     const identifier = "self";
     const state = useRegisterModule(identifier, { set });
 
-    // Initialize
+    // Config
     const { getConfig, setConfig } = useConfigurationContext();
     const [server, setServer] = useState(() => getConfig("maiswan/scharles-client.server"));
     const [modules, setModules] = useState(() => getConfig("maiswan/scharles-client.modules"));
     const [authKey, setAuthKey] = useState(() => getConfig("maiswan/scharles-client.authKey"));
     const [authServer, setAuthServer] = useState(() => getConfig("maiswan/scharles-client.authServer"));
 
+    // Debug
+    const [debug, setDebug] = useState("");
+    const [debugOutput, setDebugOutput] = useState("");
+
+    const sendDebug = useCallback(() => {
+
+        const components = debug.split(" ");
+
+        dispatchCommand({
+            command: {
+                commandId: "",
+                module: components[0],
+                action: components[1],
+                parameters: components.slice(2),
+            },
+            respond: (command: Command, success: boolean, data: unknown | null) => { setDebugOutput(JSON.stringify({ command, success, data })); }
+        })
+    }, [debug, dispatchCommand]);
+
+
+    // Initialize: show panel if no server has been specified
     useEffect(() => {
-        // Show panel if no server has been specified
         if (!server) { state.enableDebug(); }
     }, []);
 
@@ -63,38 +86,44 @@ const Self: React.FC = () => {
             <title>{`${PackageJson.name}/${clientId}`}</title>
             {
                 state.isDebugging() &&
-                <div className="fullscreen flex justify-center items-center">
-                    <div className="w-full max-w-2xl m-4 z-100">
-                        <header className="flex flex-row gap-4 justify-between font-semibold text-lg items-center bg-stone-300 px-4 py-2">
-                            <h1>{PackageJson.name} {PackageJson.version}</h1>
-                            <button className="max-w-16" onClick={close}>&#x2715;</button>
+                <div className="fullscreen flex justify-center items-center shadow-lg">
+                    <div className="w-full max-w-2xl m-4 z-100 bg-white">
+                        <header className="bg-stone-200 p-4 border-b-1 border-stone-400/50">
+                            <div className="flex flex-row gap-4 justify-between mb-1">
+                                <h1>{PackageJson.name} {PackageJson.version}</h1>
+                                <button className="max-w-16" onClick={close}>&#x2715;</button>
+                            </div>
+
+                            <p>Press <kbd className="buttonBase">CTRL</kbd><span className="mx-1">+</span><kbd className="buttonBase">,</kbd> to access this panel any time.</p>
                         </header>
-                        <div className="flex flex-col gap-4 bg-white p-4">
 
-                            <div>Press <kbd className="buttonBase">CTRL</kbd><span className="mx-1">+</span><kbd className="buttonBase">,</kbd> to access this panel any time.</div>
+                        <div className="flex flex-col gap-1 p-4 max-h-[60vh] overflow-y-auto">
+                            <h2>Settings</h2>
+                            <div className="secondary">Server</div>
+                            <input value={server} onChange={(e) => setServer(e.target.value)} placeholder="wss://localhost:12024" />
 
-                            <div className="mt-4">
-                                <div>Server</div>
-                                <input value={server} onChange={(e) => setServer(e.target.value)} className="my-1 px-2 py-1 border-1 border-stone-500 w-full font-mono" placeholder="wss://localhost:12024" />
-                            </div>
-                            <div className="mt-4 mb-8">
-                                <div>Modules</div>
-                                <input value={modules} onChange={(e) => setModules(e.target.value)} className="my-1 px-2 py-1 border-1 border-stone-500 w-full font-mono" placeholder="wallpaper,noise,self" />
-                            </div>
-                            <div className="mt-4">
-                                <div>Authentication Key</div>
-                                <input value={authKey} onChange={(e) => setAuthKey(e.target.value)} className="my-1 px-2 py-1 border-1 border-stone-500 w-full font-mono" placeholder="" />
-                            </div>
-                            <div className="mt-4">
-                                <div>Authentication Server</div>
-                                <input value={authServer} onChange={(e) => setAuthServer(e.target.value)} className="my-1 px-2 py-1 border-1 border-stone-500 w-full font-mono" placeholder="https://localhost:12024/api/v3/auth" />
-                            </div>
+                            <div className="mt-4 secondary">Modules</div>
+                            <input value={modules} onChange={(e) => setModules(e.target.value)} placeholder="wallpaper,noise,self" />
 
+                            <div className="mt-4 secondary">Authentication Key</div>
+                            <input value={authKey} onChange={(e) => setAuthKey(e.target.value)} placeholder="" />
+
+                            <div className="mt-4 secondary">Authentication Server</div>
+                            <input value={authServer} onChange={(e) => setAuthServer(e.target.value)} placeholder="https://localhost:12024/api/v3/auth" />
+
+                            <h2 className="mt-8">Debug</h2>
+                            <div className="secondary">Send to CommandBus</div>
                             <div className="flex flex-col md:flex-row gap-1">
-                                <button onClick={reload}>Apply</button>
-                                <button onClick={close}>Close</button>
+                                <input value={debug} onChange={(e) => setDebug(e.target.value)} placeholder="wallpaper enable" />
+                                <button onClick={sendDebug} className="md:max-w-32">Send</button>
                             </div>
+                            <div className="secondary font-mono select-text">{debugOutput}</div>
                         </div>
+
+                        <footer className="flex flex-col md:flex-row gap-1 bg-stone-200 border-t-1 border-stone-400/50 p-4">
+                            <button onClick={reload}>Apply</button>
+                            <button onClick={close}>Close</button>
+                        </footer>
                     </div>
                 </div>
             }

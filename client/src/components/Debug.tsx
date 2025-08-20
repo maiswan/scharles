@@ -8,9 +8,9 @@ export interface DebugProps {
 const Debug: React.FC<PropsWithChildren<DebugProps>> = ({ title, disableDebug, children }) => {
     return (
         <div className="debug">
-            <div className="flex flex-row gap-x-4">
-                <h1 className="flex-1">{title}</h1>
-                <button onClick={disableDebug}>X</button>
+            <div className="flex flex-row items-center justify-between gap-4 mb-4">
+                <h1>{title}</h1>
+                <button className="max-w-32" onClick={disableDebug}>X</button>
             </div>
             {children}
         </div>
