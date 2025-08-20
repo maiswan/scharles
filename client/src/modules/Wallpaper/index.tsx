@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRegisterModule } from '../../hooks/useRegisterModule';
 import { useLogger } from '../../hooks/useLogger';
 import Debug from '../../components/Debug';
+import { useAuthenticationContext } from '../../hooks/AuthenticationContext';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -12,13 +13,16 @@ const Wallpaper: React.FC = () => {
     const [transitionMs, setTransitionMs] = useState(1000);
     const isPausedRef = useRef(false);
 
+    const { jwt } = useAuthenticationContext();
+    const logger = useLogger();
+
     // Derived
     const [refetch, setRefetch] = useState(0);
-    const [bottomImage, setBottomImage] = useState<string | undefined>();
-    const [topImage, setTopImage] = useState<string | undefined>();
-    const [isTopImageVisible, setIsTopImageVisible] = useState(true);
     const isTransiting = useRef(false);
     const previousObjectUrl = useRef("");
+
+    const bottomImageRef = useRef<HTMLImageElement | null>(null);
+    const topImageRef = useRef<HTMLImageElement | null>(null);
 
     const set = useCallback((key: string, value: unknown) => {
         const string = value as string;
@@ -41,43 +45,54 @@ const Wallpaper: React.FC = () => {
     const unpause = useCallback(() => isPausedRef.current = false, []);
     const isPaused = useCallback(() => isPausedRef.current, []);
 
-    const next = useCallback(() => setRefetch(prev => prev + 1), []);
+    const next = useCallback(() => setRefetch(prev => 1 - prev), []);
 
-    const fetchAndCrossFadeImage = useCallback(async () => {
-        if (isTransiting.current) { return; }
-        if (isPausedRef.current) { return; }
-        if (source === "") { return; }
+    const fetchAndCrossFadeImage = useCallback(async (jwt: string | null, source: string, transitionMs: number) => {
+        if (!jwt) { return; }
+        if (!bottomImageRef.current) { return; }
+        if (!topImageRef.current) { return; }
 
         logger.debug(`[wallpaper] Fetching ${source}`);
         isTransiting.current = true;
         URL.revokeObjectURL(previousObjectUrl.current);
 
         try {
-            const response = await fetch(source);
+            const response = await fetch(source, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${jwt}`,
+                    "Content-Type": "application/json",
+                },
+            });
+
             const blob = await response.blob();
             const objectUrl = URL.createObjectURL(blob);
             previousObjectUrl.current = objectUrl;
 
-            setBottomImage(objectUrl);
-            setIsTopImageVisible(false);
+            // hide top image and swap with new image
+            bottomImageRef.current.src = objectUrl;
+            topImageRef.current.style.opacity = "0";
+
             await delay(transitionMs);
-            setTopImage(objectUrl);
+
+            topImageRef.current.src = objectUrl;
+            topImageRef.current.style.opacity = "1";
 
         } catch (error) {
-            console.error("[wallpaper] Fetch failed", error);
-        
-        } finally {
-            setIsTopImageVisible(true);
-            isTransiting.current = false;
+            logger.error(`[wallpaper]`, error);
         }
-    }, [source, transitionMs]);
+
+    }, [logger]);
 
     // Fetch on interval
     useEffect(() => {
-        fetchAndCrossFadeImage();
-        const interval = setInterval(fetchAndCrossFadeImage, periodMs);
+
+        fetchAndCrossFadeImage(jwt, source, transitionMs);
+
+        const interval = setInterval(() => fetchAndCrossFadeImage(jwt, source, transitionMs), periodMs);
         return () => clearInterval(interval);
-    }, [fetchAndCrossFadeImage, periodMs, refetch]);
+
+    }, [fetchAndCrossFadeImage, periodMs, jwt, source, transitionMs, refetch]);
 
     // Module
     const identifier = "wallpaper";
@@ -85,21 +100,17 @@ const Wallpaper: React.FC = () => {
         identifier,
         { set, next, pause, unpause, isPaused }
     );
-    const logger = useLogger();
 
     if (!state.isEnabled()) { return; }
     return (
         <>
-            <img src={bottomImage} className="fullscreen object-cover object-top"></img>
-            <img src={topImage} className={`fullscreen object-cover object-top transition-opacity ease-in-out ${isTopImageVisible ? "opacity-100" : "opacity-0"}`} style={{ transitionDuration: `${transitionMs}ms` }}></img>
+            <img ref={bottomImageRef} className="fullscreen object-cover object-top"></img>
+            <img ref={topImageRef} className="fullscreen object-cover object-top transition-opacity duration-1000 ease-in-out" style={{ transitionDuration: `${transitionMs}ms` }}></img>
 
             {
                 state.isDebug() &&
                 <Debug title={identifier} disableDebug={state.disableDebug}>
-                    <div>{source} {periodMs} {transitionMs} {refetch} {isPausedRef.current + ""}</div>
-                    <div>{bottomImage}</div>
-                    <div>{topImage}</div>
-                    <div>{isTopImageVisible + ""}</div>
+                    <div>{source} {periodMs} {transitionMs} {refetch}</div>
                 </Debug>
             }
         </>

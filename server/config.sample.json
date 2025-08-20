@@ -9,6 +9,10 @@
 		"forceServeIncompatibleClients": false,
 		"maxCommandHistorySaved": 256,
 		"authentication": {
+			"clients": {
+				"keys": [],
+				"jwtExpiration": "1h"
+			},
 			"controllers": {
 				"keys": [],
 				"jwtExpiration": "1h"

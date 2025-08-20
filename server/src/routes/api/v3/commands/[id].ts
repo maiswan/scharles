@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import authenticateJwt from "../../../../middlewares/jwt";
+import authenticateJwt, { Role } from "../../../../middlewares/jwt";
 
 export const get = [
-    authenticateJwt("admin"),
+    authenticateJwt(Role.Admin),
     (req: Request, res: Response) => {
         const id = req.params["id"];
         const commandStore = req.app.locals.commandStore;
@@ -13,7 +13,7 @@ export const get = [
 ]
 
 export const del = [
-    authenticateJwt("admin"),
+    authenticateJwt(Role.Admin),
     (req: Request, res: Response) => {
         const id = req.params["id"];
         const commandStore = req.app.locals.commandStore;

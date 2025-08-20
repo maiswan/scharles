@@ -1,5 +1,5 @@
 import { ILogObj, Logger } from "tslog";
-import { type CommandResponse, type CommandRecord, type CommandRequest, getShortCommandId } from "../../shared/command";
+import { type CommandResponseMessage, type CommandRecord, type CommandRequest, getShortCommandId } from "../../shared/command";
 
 export type CommandStore = ReturnType<typeof createCommandStore>;
 
@@ -30,15 +30,15 @@ export function createCommandStore(logger: Logger<ILogObj>, maxCommandHistorySav
             store.delete(oldestCommand);
         },
 
-        addResponse(response: CommandResponse): boolean {
-            logger.debug(`[commandStore] Adding response from client ${response.clientId} for ${getShortCommandId(response)}`);
+        addResponse(clientId: number, response: CommandResponseMessage): boolean {
+            logger.debug(`[commandStore] Adding response from client ${clientId} for ${getShortCommandId(response)}`);
             const record = store.get(response.commandId);
             if (!record) {
                 logger.warn("[commandStore] Parent command", response.commandId, "does not exist");
                 return false;
             }
 
-            record.responses[response.clientId] = response;
+            record.responses[clientId] = response;
             record.receiveTimestamp = new Date();
 
             return true;

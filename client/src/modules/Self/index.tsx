@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRegisterModule } from "../../hooks/useRegisterModule";
 import PackageJson from "../../../package.json";
-import useConfiguration from "../../hooks/useConfiguration";
+import { useConfigurationContext } from "../../hooks/ConfigurationContext";
 
 const Self: React.FC = () => {
     // Plugin
@@ -17,9 +17,11 @@ const Self: React.FC = () => {
     const state = useRegisterModule(identifier, { set });
 
     // Initialize
-    const { getConfig, setConfig } = useConfiguration();
-    const [server, setServer] = useState(getConfig("maiswan/scharles-client.server"));
-    const [modules, setModules] = useState(getConfig("maiswan/scharles-client.modules"));
+    const { getConfig, setConfig } = useConfigurationContext();
+    const [server, setServer] = useState(() => getConfig("maiswan/scharles-client.server"));
+    const [modules, setModules] = useState(() => getConfig("maiswan/scharles-client.modules"));
+    const [authKey, setAuthKey] = useState(() => getConfig("maiswan/scharles-client.authKey"));
+    const [authServer, setAuthServer] = useState(() => getConfig("maiswan/scharles-client.authServer"));
 
     useEffect(() => {
         // Show panel if no server has been specified
@@ -50,8 +52,11 @@ const Self: React.FC = () => {
         const modulesArray = modules.replace(/\W/g, " ").split(" ").filter(Boolean);
         setConfig("maiswan/scharles-client.modules", JSON.stringify(modulesArray));
 
+        setConfig("maiswan/scharles-client.authKey", authKey);
+        setConfig("maiswan/scharles-client.authServer", authServer);
+
         location.reload();
-    }, [modules, server, setConfig]);
+    }, [authKey, authServer, modules, server, setConfig]);
 
     return (
         <>
@@ -75,6 +80,14 @@ const Self: React.FC = () => {
                             <div className="mt-4 mb-8">
                                 <div>Modules</div>
                                 <input value={modules} onChange={(e) => setModules(e.target.value)} className="my-1 px-2 py-1 border-1 border-stone-500 w-full font-mono" placeholder="wallpaper,noise,self" />
+                            </div>
+                            <div className="mt-4">
+                                <div>Authentication Key</div>
+                                <input value={authKey} onChange={(e) => setAuthKey(e.target.value)} className="my-1 px-2 py-1 border-1 border-stone-500 w-full font-mono" placeholder="" />
+                            </div>
+                            <div className="mt-4">
+                                <div>Authentication Server</div>
+                                <input value={authServer} onChange={(e) => setAuthServer(e.target.value)} className="my-1 px-2 py-1 border-1 border-stone-500 w-full font-mono" placeholder="https://localhost:12024/api/v3/auth" />
                             </div>
 
                             <div className="flex flex-col md:flex-row gap-1">

@@ -1,18 +1,23 @@
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
 
-export type Role = "controller" | "admin";
+export enum Role {
+    Client = 1,
+    Controller = 2,
+    Admin = 3
+}
 
 export interface JwtRolePayload extends JwtPayload {
     role: Role;
-    issuedAt: number;
+    iss?: string | undefined;
+    sub?: string | undefined;
+    aud?: string | string[] | undefined;
+    exp?: number | undefined;
+    nbf?: number | undefined;
+    iat?: number | undefined;
+    jti?: string | undefined;
 }
 
-const hasPermission = (role: Role, requiredMinimumRole: Role) => {
-    if (role === "admin") { return true; }
-    if (role === "controller" && requiredMinimumRole === "controller") { return true; }
-    return false;
-}
 const authenticateJwt = (requiredMinimumRole: Role) => async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
@@ -25,7 +30,7 @@ const authenticateJwt = (requiredMinimumRole: Role) => async (req: Request, res:
     try {
 
         req.user = jwt.verify(token, jwtSecret) as JwtRolePayload;
-        if (hasPermission(req.user.role, requiredMinimumRole)) {
+        if (req.user.role >= requiredMinimumRole) {
             next();
             return;
         }

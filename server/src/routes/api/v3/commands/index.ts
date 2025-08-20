@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { CommandRequest } from "../../../../../../shared/command";
-import authenticateJwt from "../../../../middlewares/jwt";
+import authenticateJwt, { Role } from "../../../../middlewares/jwt";
 
 export const get = [
-    authenticateJwt("admin"),
+    authenticateJwt(Role.Admin),
     (req: Request, res: Response) => {
         const { commandStore } = req.app.locals;
         const commands = commandStore.getAll();
@@ -12,7 +12,7 @@ export const get = [
 ]
 
 export const del = [
-    authenticateJwt("admin"),
+    authenticateJwt(Role.Admin),
     (req: Request, res: Response) => {
         const { commandStore } = req.app.locals;
         commandStore.deleteAll();
@@ -21,7 +21,7 @@ export const del = [
 ]
 
 export const post = [
-    authenticateJwt("controller"),
+    authenticateJwt(Role.Controller),
     (req: Request, res: Response) => {
         const request = req.body as CommandRequest;
         if (!request) {

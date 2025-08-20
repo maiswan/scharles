@@ -4,11 +4,19 @@ import authenticateJwt, { JwtRolePayload, Role } from "../../../../middlewares/j
 
 const roleToConfigKey = (role: Role) => {
     switch (role) {
-        case "controller":
+        case Role.Client:
+            return "clients";
+        case Role.Controller:
             return "controllers";
-        case "admin":
+        case Role.Admin:
             return "admins";
     }
+}
+
+const ConfigRoleMap: Record<string, Role> = {
+    "clients": Role.Client,
+    "controllers": Role.Controller,
+    "admins": Role.Admin,
 }
 
 // Allow users to authenticate themselves with an API key
@@ -23,20 +31,15 @@ export const post = (req: Request, res: Response) => {
         return res.status(400).json({ error: "API key required" });
     }
 
-    let role: Role | null = null;
-
-    if (auth.controllers.keys.includes(apiKey)) { role = "controller"; }
-    if (role == null && auth.admins.keys.includes(apiKey)) { role = "admin"; }
+    let role = Object.entries(ConfigRoleMap)
+        .find(([configKey,]) => auth[configKey].keys.includes(apiKey))?.[1];
 
     if (!role) {
         logger.debug(`[JWT] Invalid API key ending in ${apiKey.slice(-4)}`);
         return res.status(401).json({ error: "Invalid API key" });
     }
 
-    const payload: JwtRolePayload = {
-        role,
-        issuedAt: Date.now()
-    };
+    const payload: JwtRolePayload = { role };
 
     const expiresIn = auth[roleToConfigKey(role)].jwtExpiration;
     const token = jwt.sign(payload, auth.jwtSecret, { expiresIn } as SignOptions);
@@ -48,7 +51,7 @@ export const post = (req: Request, res: Response) => {
 // Debugging endpoint for users to test if they're authenticated
 // If so, return what we know about them
 export const get = [
-    authenticateJwt("controller"),
+    authenticateJwt(Role.Client),
     (req: Request, res: Response) => {
         res.status(200).json(req.user);
     }

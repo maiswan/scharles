@@ -9,6 +9,7 @@ export default interface Config {
         forceServeIncompatibleClients: boolean;
         maxCommandHistorySaved: number;
         authentication: {
+            clients: AuthRoleConfig;
             controllers: AuthRoleConfig;
             admins: AuthRoleConfig;
             jwtSecret: string;

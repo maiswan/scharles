@@ -1,18 +1,27 @@
 import { WebSocketServer, WebSocket, Data } from "ws";
-import { Config } from "../../config";
+import Config from "../../config";
 import { Server } from "http";
-import { Command, CommandRequest, CommandResponse } from "../../../shared/command";
+import { AuthenticationMessage, ClientMessage, Command, CommandRequest, CommandResponseMessage } from "../../../shared/command";
 import { randomUUID } from "crypto";
 import { CommandStore } from "../createCommandStore";
 import PackageJson from "../../package.json";
-import { INCOMPATIBLE_VERSION } from "../../../shared/codes";
+import { INCOMPATIBLE_VERSION, UNAUTHENTICATED } from "../../../shared/codes";
 import { Logger, ILogObj } from "tslog";
+import jwt, { JwtPayload } from "jsonwebtoken";
 
 export type WebSocketHandler = ReturnType<typeof createWebSocketHandler>;
-const serverVersion = PackageJson.version;
+const SERVER_MAJOR_VERSION = PackageJson.version.split(".")[0];
+
+type ClientEntry = {
+    id: number,
+    socket: WebSocket,
+    version: string,
+    timeout: NodeJS.Timeout,
+    isExpired: boolean,
+}
 
 export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Server, config: Config, commandStore: CommandStore) {
-    const clients: Record<number, WebSocket> = {};
+    const clients: Record<number, ClientEntry> = {};
     const server = new WebSocketServer({ server: httpServer });
 
     function getUniqueId(): number {
@@ -38,7 +47,7 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
 
         const destination = clients[clientId];
         const commandJson = JSON.stringify(command);
-        destination.send(commandJson);
+        destination.socket.send(commandJson);
     }
 
     function unicast(request: CommandRequest) {
@@ -68,19 +77,21 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
         return multicast(request);
     }
 
-    function initializeClient(ws: WebSocket, request: Request) {
-        const id = getUniqueId();
-        clients[id] = ws;
+    function purge(id: number) {
+        if (!clients[id]) { return; }
 
+        logger.info(`[webSocketHandler] Client ${id} has expired, disconnecting`);
+        clients[id].socket.close(UNAUTHENTICATED, "Reauthenticate");
+    }
+
+    function initializeClient(id: number) {
         // Check client version
-        const searchParams = new URLSearchParams(request.url.substring(1)); // remove leading "/"
-        const clientVersion = searchParams.get("version");
+        const clientVersion = clients[id].version;
         const clientMajorVersion = clientVersion?.split(".")[0];
-        const serverMajorVersion = serverVersion.split(".")[0];
 
-        if (clientMajorVersion !== serverMajorVersion && !config.server.forceServeIncompatibleClients) {
-            logger.warn(`[webSocketHandler] Refusing connection: client ${id} is version ${clientVersion}, but server is ${serverVersion}`);
-            ws.close(INCOMPATIBLE_VERSION, `Migrate to ${serverVersion} or enable forceServerIncompatibleClients in server settings`);
+        if (clientMajorVersion !== SERVER_MAJOR_VERSION && !config.server.forceServeIncompatibleClients) {
+            logger.warn(`[webSocketHandler] Refusing connection: client ${id} is version ${clientVersion}, but server is ${SERVER_MAJOR_VERSION}`);
+            clients[id].socket.close(INCOMPATIBLE_VERSION, `Migrate to ${SERVER_MAJOR_VERSION} or enable forceServeIncompatibleClients in server settings`);
             return;
         }
 
@@ -103,23 +114,62 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
             unicast({ clientIds: [id], module, action: enableCommand, parameters: [] });
             unicast({ clientIds: [id], module, action: enableDebugCommand, parameters: [] });
         });
+    }
+
+    function acceptConnection(ws: WebSocket) {
+        let id = getUniqueId();
 
         ws.on('message', (data: Data) => {
             if (data == null) { return; }
-            const response = JSON.parse((data as Buffer).toString()) as CommandResponse;
+            if (clients[id]?.isExpired) { return; }
 
-            logger.debug("[webSocketHandler] RX", response);
-            commandStore.addResponse(response);
+            const response: ClientMessage = JSON.parse((data as Buffer).toString());
+            
+            logger.debug(`[webSocketHandler] RX ${response.type} from client ${id}`);
+
+            if (response.type === "CommandResponse") {
+                const data: CommandResponseMessage = response.data;
+                commandStore.addResponse(id, data);
+                return;
+            }
+
+            if (response.type !== "Authentication") { return; }
+
+            // Authentication
+            const authMessage: AuthenticationMessage = response.data;
+
+            try {
+                const decoded = jwt.verify(authMessage.jwt, config.server.authentication.jwtSecret) as JwtPayload;
+                if (!decoded.iat || !decoded.exp) { return; }
+                const duration = Math.max(0, decoded.exp - decoded.iat) * 1000;
+
+                const isNewClient = clients[id] == null;
+                clearTimeout(clients[id]?.timeout);
+
+                clients[id] = {
+                    id,
+                    socket: ws,
+                    version: authMessage.version,
+                    timeout: setTimeout(() => purge(id), duration),
+                    isExpired: false,
+                };
+                logger.debug(`[webSocketHandler] Client ${id} will expire in ${duration}ms`);
+
+                if (isNewClient) { initializeClient(id); }
+
+            } catch (error) {
+                logger.error(`[webSocketHandler]`, error);
+            }
         })
 
         ws.on('close', () => {
+            clients[id].isExpired = true;
             logger.info(`Client ${id} disconnected`);
-            delete clients[id];
         });
     }
 
     // Initialize server connection handling
-    server.on('connection', initializeClient);
+    server.on('connection', acceptConnection);
 
     // Return public interface
     return {
