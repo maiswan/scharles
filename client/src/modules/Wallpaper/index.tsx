@@ -44,13 +44,13 @@ const Wallpaper: React.FC = () => {
     const pause = useCallback(() => isPausedRef.current = true, []);
     const unpause = useCallback(() => isPausedRef.current = false, []);
     const isPaused = useCallback(() => isPausedRef.current, []);
-
-    const next = useCallback(() => setRefetch(prev => 1 - prev), []);
+    const next = useCallback(() => setRefetch(prev => prev + 1), []);
 
     const fetchAndCrossFadeImage = useCallback(async (jwt: string | null, source: string, transitionMs: number) => {
         if (!jwt) { return; }
         if (!bottomImageRef.current) { return; }
         if (!topImageRef.current) { return; }
+        if (isPausedRef.current) { return; }
 
         logger.debug(`[wallpaper] Fetching ${source}`);
         isTransiting.current = true;
@@ -111,6 +111,7 @@ const Wallpaper: React.FC = () => {
                 state.isDebug() &&
                 <Debug title={identifier} disableDebug={state.disableDebug}>
                     <div>{source} {periodMs} {transitionMs} {refetch}</div>
+                    <div>{jwt}</div>
                 </Debug>
             }
         </>
