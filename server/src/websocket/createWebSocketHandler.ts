@@ -163,6 +163,8 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
         })
 
         ws.on('close', () => {
+            if (!clients[id]) { return; }
+
             clients[id].isExpired = true;
             logger.info(`Client ${id} disconnected`);
         });
