@@ -51,6 +51,7 @@ const Wallpaper: React.FC = () => {
         if (!bottomImageRef.current) { return; }
         if (!topImageRef.current) { return; }
         if (isPausedRef.current) { return; }
+        if (isTransiting.current) { return; }
 
         logger.debug(`[wallpaper] Fetching ${source}`);
         isTransiting.current = true;
@@ -80,6 +81,8 @@ const Wallpaper: React.FC = () => {
 
         } catch (error) {
             logger.error(`[wallpaper]`, error);
+        } finally {
+            isTransiting.current = false;
         }
 
     }, [logger]);
