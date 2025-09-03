@@ -46,9 +46,10 @@ const Self: React.FC = () => {
     }, [debug, dispatchCommand]);
 
 
-    // Initialize: show panel if no server has been specified
+    // Initialize: show panel if any setting is empty
     useEffect(() => {
-        if (!server) { state.enableDebug(); }
+        const allPopulated = server && modules && authKey && authServer;
+        if (!allPopulated) { state.enableDebug(); }
     }, []);
 
     // Ctrl+, to toggle
