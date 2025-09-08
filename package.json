@@ -6,11 +6,12 @@
         "scharles-server"
     ],
     "scripts": {
-        "install:all": "cd server && npm install && cd ../client && npm install",
+        "install": "cd server && npm install && cd ../client && npm install",
         "start:server": "cd server && npm start",
         "start:client": "cd client && npm start",
         "dev:server": "cd server && npx nodemon app.ts",
         "dev:client": "cd client && npm run dev",
-        "build:client": "cd client && npm run build"
+        "build:client": "cd client && npm run build",
+        "mkcert": "cd server && node ./src/createCert.ts"
     }
 }

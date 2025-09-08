@@ -1,17 +1,20 @@
 {
     "name": "scharles-server",
     "private": true,
-    "version": "2.0.0",
+    "version": "3.0.0",
     "dependencies": {
         "cors": "^2.8.5",
         "express-file-routing": "^3.0.3",
         "express-rate-limit": "^7.5.0",
+        "jsonwebtoken": "^9.0.2",
+        "mkcert": "^3.2.0",
         "tslog": "^4.9.3",
         "ws": "^8.18.1"
     },
     "devDependencies": {
         "@types/cors": "^2.8.18",
         "@types/express": "^5.0.0",
+        "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^22.15.17",
         "@types/ws": "^8.18.1",
         "express": "^4.21.2",

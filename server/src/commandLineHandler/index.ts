@@ -1,10 +1,9 @@
 import readline from "readline";
 import { CommandTransmitter } from "../websocket/createCommandTransmitter";
-import Endpoint from "./endpoint";
 
-export function createCommandLineHandler(commandTransmitter: CommandTransmitter): Endpoint {
+export function createCommandLineHandler(commandTransmitter: CommandTransmitter) {
     const handleInput = (input: string) => {
-        commandTransmitter.transmitFromSingleValue(input);
+        commandTransmitter.transmitFromString(input);
     }
 
     const rl = readline.createInterface({
@@ -12,6 +11,4 @@ export function createCommandLineHandler(commandTransmitter: CommandTransmitter)
         output: process.stdout,
     })
     rl.on('line', handleInput);
-
-    return { identifier: "CommandLineHandler" }
 }

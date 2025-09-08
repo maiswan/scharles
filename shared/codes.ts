@@ -1,0 +1,2 @@
+export const INCOMPATIBLE_VERSION = 4000;
+export const UNAUTHENTICATED = 4010;

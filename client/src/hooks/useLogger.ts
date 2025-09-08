@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { Logger, ILogObj } from "tslog";
 
 // Singleton logger instance
-export const logger = new Logger<ILogObj>({
+const logger = new Logger<ILogObj>({
     prettyLogTemplate: "{{yyyy}}.{{mm}}.{{dd}} {{hh}}:{{MM}}:{{ss}}:{{ms}}\t{{logLevelName}}\t",
 });
 
@@ -15,5 +15,5 @@ export function useLogger() {
     const error = useCallback((...args: unknown[]) => logger.error(...args), []);
     const fatal = useCallback((...args: unknown[]) => logger.fatal(...args), []);
 
-    return { trace, debug, info, warn, error, fatal }
+    return { trace, debug, info, warn, error, fatal };
 }
