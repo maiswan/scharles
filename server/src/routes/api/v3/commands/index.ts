@@ -29,9 +29,9 @@ export const post = [
             return;
         };
 
-        const { commandTx, commandStore } = req.app.locals;
+        const { commandStore, wsHandler } = req.app.locals;
 
-        const id = commandTx.transmitFromCommandRequest(request);
+        const id = wsHandler.sendToClient(request);
         setTimeout(() => {
             const response = commandStore.get(id);
             res.status(200).json(response);

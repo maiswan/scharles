@@ -1,8 +1,8 @@
 import { Logger, ILogObj } from "tslog";
 import { Config } from "./config";
 import { CommandStore } from "./src/createCommandStore";
-import { CommandTransmitter } from "./src/websocket/createCommandTransmitter";
 import { JwtRolePayload } from "./src/middlewares/jwt";
+import { WebSocketHandler } from "./src/websocket/createWebSocketHandler";
 
 declare global {
     namespace Express {
@@ -10,7 +10,7 @@ declare global {
             logger: Logger<ILogObj>,
             config: Config,
             commandStore: CommandStore,
-            commandTx: CommandTransmitter,
+            wsHandler: WebSocketHandler;
         }
 
         interface Request {

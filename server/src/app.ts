@@ -1,7 +1,6 @@
 import { createWebSocketHandler } from "./websocket/createWebSocketHandler";
 import https from "https";
 import { createCommandLineHandler } from "./commandLineHandler";
-import { createCommandTransmitter } from "./websocket/createCommandTransmitter";
 import { createCommandStore } from "./createCommandStore";
 import createApp from "./createApp";
 import { Logger, ILogObj } from "tslog";
@@ -25,14 +24,13 @@ const httpsServer = https.createServer(certs, app);
 
 // Initialize modules
 const commandStore = createCommandStore(logger, config.server.maxCommandHistorySaved);
-const wssHandler = createWebSocketHandler(logger, httpsServer, config, commandStore);
-const commandTx = createCommandTransmitter(wssHandler);
-createCommandLineHandler(commandTx);
+const wsHandler = createWebSocketHandler(logger, httpsServer, config, commandStore);
+createCommandLineHandler(wsHandler);
 
 app.locals.logger = logger;
 app.locals.config = config;
 app.locals.commandStore = commandStore;
-app.locals.commandTx = commandTx;
+app.locals.wsHandler = wsHandler;
 
 // Go live
 httpsServer.listen(config.server.port, () => {

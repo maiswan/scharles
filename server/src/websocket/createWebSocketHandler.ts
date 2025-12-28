@@ -17,7 +17,6 @@ type ClientEntry = {
     socket: WebSocket,
     version: string,
     timeout: NodeJS.Timeout,
-    isExpired: boolean,
 }
 
 export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Server, config: Config, commandStore: CommandStore) {
@@ -31,6 +30,7 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
     }
 
     function createCommand(request: CommandRequest): Command {
+        // Strip clientIds so clients don't know about each other
         return {
             commandId: randomUUID(),
             module: request.module,
@@ -40,7 +40,7 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
     }
 
     function send(clientId: number, command: Command) {
-        if (!(clientId in clients)) {
+        if (!clients[clientId]) {
             logger.warn("[webSocketHandler] Client", clientId, "does not exist");
             return;
         }
@@ -50,17 +50,13 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
         destination.socket.send(commandJson);
     }
 
-    function unicast(request: CommandRequest) {
-        const command = createCommand(request);
-        commandStore.addRequest(command.commandId, request);
+    function sendToClient(request: CommandRequest) {
+        // if broadcast, populate clientIds with all connected clients
+        if (request.clientIds.length === 1 && request.clientIds[0] === -1){
+            const everyone = Object.keys(clients).map(Number);
+            request.clientIds = everyone;
+        }
 
-        logger.debug("[webSocketHandler] TX", command);
-        send(request.clientIds[0], command);
-
-        return command.commandId;
-    }
-
-    function multicast(request: CommandRequest) {
         const command = createCommand(request);
         commandStore.addRequest(command.commandId, request);
 
@@ -70,18 +66,10 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
         return command.commandId;
     }
 
-    function broadcast(request: CommandRequest) {
-        const everyone = Object.keys(clients).map(Number);
-        request.clientIds = everyone;
-
-        return multicast(request);
-    }
-
     function purge(id: number) {
-        if (!clients[id]) { return; }
-
+        clients[id]?.socket.close(UNAUTHENTICATED, "Reauthenticate");
+        delete clients[id]; 
         logger.info(`[webSocketHandler] Client ${id} has expired, disconnecting`);
-        clients[id].socket.close(UNAUTHENTICATED, "Reauthenticate");
     }
 
     function initializeClient(id: number) {
@@ -97,7 +85,7 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
 
         // Assign clientId to client
         logger.info(`[webSocketHandler] Client ${id} of version ${clientVersion} connected`);
-        unicast({ clientIds: [id], module: "self", action: "set", parameters: ["clientId", id] });
+        sendToClient({ clientIds: [id], module: "self", action: "set", parameters: ["clientId", id] });
 
         // Pass config
         Object.keys(config.modules).forEach(module => {
@@ -106,13 +94,13 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
 
             Object.keys(keys).forEach(key => {
                 const value = keys[key];
-                unicast({ clientIds: [id], module, action: "set", parameters: [key, value] });
+                sendToClient({ clientIds: [id], module, action: "set", parameters: [key, value] });
             });
 
             const enableCommand = settings.isEnabled ? "enable" : "disable";
             const enableDebugCommand = settings.isDebug ? "enableDebug" : "disableDebug";
-            unicast({ clientIds: [id], module, action: enableCommand, parameters: [] });
-            unicast({ clientIds: [id], module, action: enableDebugCommand, parameters: [] });
+            sendToClient({ clientIds: [id], module, action: enableCommand, parameters: [] });
+            sendToClient({ clientIds: [id], module, action: enableDebugCommand, parameters: [] });
         });
     }
 
@@ -121,7 +109,6 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
 
         ws.on('message', (data: Data) => {
             if (data == null) { return; }
-            if (clients[id]?.isExpired) { return; }
 
             const response: ClientMessage = JSON.parse((data as Buffer).toString());
             
@@ -144,14 +131,13 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
                 const duration = Math.max(0, decoded.exp - decoded.iat) * 1000;
 
                 const isNewClient = clients[id] == null;
-                clearTimeout(clients[id]?.timeout);
 
+                clearTimeout(clients[id]?.timeout);
                 clients[id] = {
                     id,
                     socket: ws,
                     version: authMessage.version,
                     timeout: setTimeout(() => purge(id), duration),
-                    isExpired: false,
                 };
                 logger.debug(`[webSocketHandler] Client ${id} will expire in ${duration}ms`);
 
@@ -163,9 +149,8 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
         })
 
         ws.on('close', () => {
-            if (!clients[id]) { return; }
-
-            clients[id].isExpired = true;
+            clients[id]?.socket.close();
+            delete clients[id]; 
             logger.info(`Client ${id} disconnected`);
         });
     }
@@ -174,9 +159,5 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
     server.on('connection', acceptConnection);
 
     // Return public interface
-    return {
-        unicast,
-        multicast,
-        broadcast,
-    };
+    return { sendToClient };
 }
