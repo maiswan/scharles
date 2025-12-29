@@ -2,7 +2,7 @@ import { ClientMessage, Command } from '../../../shared/command';
 import { useLogger } from './useLogger';
 import { useCommandBus } from './CommandBus';
 import PackageJson from "../../package.json";
-import { INCOMPATIBLE_VERSION } from "../../../shared/codes";
+import StatusCode from "../../../shared/codes";
 import { useCallback, useEffect, useRef } from 'react';
 
 const VERSION = PackageJson.version;
@@ -70,10 +70,10 @@ export function useWebSocket(server: string, jwt: string | null) {
         logger.info('[useWebSocket] Connection closed:', event.reason);
         socketRef.current = null;
 
-        if (event.code === INCOMPATIBLE_VERSION) { return; } // do not attempt reconnect 
+        if (event.code === StatusCode.INCOMPATIBLE_VERSION) { return; } // do not attempt reconnect 
         if (reconnectIntervalRef.current) { return; } // Already set up for reconnection
 
-        reconnectIntervalRef.current = setInterval(() => {
+        reconnectIntervalRef.current = window.setInterval(() => {
             logger.info("[useWebSocket] Attempting reconnection");
             initialize();
         }, RECONNECT_INTERVAL);

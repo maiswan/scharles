@@ -88,7 +88,7 @@ export default function AuthenticationProvider({ children }: AuthenticationProvi
             logger.debug(`[AuthContext] Reauthenticating in ${duration}ms`);
 
             clearTimeout(authenticateIntervalRef.current);
-            authenticateIntervalRef.current = setTimeout(wrapper, duration);
+            authenticateIntervalRef.current = window.setTimeout(wrapper, duration);
         }
 
         wrapper();
