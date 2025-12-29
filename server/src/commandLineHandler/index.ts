@@ -14,7 +14,7 @@ export function createCommandLineHandler(wsHandler: WebSocketHandler) {
         if (parts.length >= 5) { parameters.push(parts.slice(4).join(" ")); }
 
         const request: CommandRequest = { clientIds, module, action, parameters };
-        return wsHandler.sendToClient(request);
+        return wsHandler.send(request);
     }
 
     const rl = readline.createInterface({

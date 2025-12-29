@@ -1,2 +1,7 @@
-export const INCOMPATIBLE_VERSION = 4000;
-export const UNAUTHENTICATED = 4010;
+enum StatusCode {
+    NORMAL = 2000,
+    INCOMPATIBLE_VERSION = 4000,
+    UNAUTHENTICATED = 4010,
+}
+
+export default StatusCode;

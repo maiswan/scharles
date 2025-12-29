@@ -1,16 +1,14 @@
 import { WebSocketServer, WebSocket, Data } from "ws";
 import Config from "../../config";
 import { Server } from "http";
-import { AuthenticationMessage, ClientMessage, Command, CommandRequest, CommandResponseMessage } from "../../../shared/command";
+import { ClientMessage, ClientMessageTypes, Command, CommandRequest } from "../../../shared/command";
 import { randomUUID } from "crypto";
 import { CommandStore } from "../createCommandStore";
-import PackageJson from "../../package.json";
-import { INCOMPATIBLE_VERSION, UNAUTHENTICATED } from "../../../shared/codes";
 import { Logger, ILogObj } from "tslog";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import { ClientMessageHandler, ClientMessageHandlerContext } from "./ClientMessageHandler";
+import StatusCode from "../../../shared/codes";
 
 export type WebSocketHandler = ReturnType<typeof createWebSocketHandler>;
-const SERVER_MAJOR_VERSION = PackageJson.version.split(".")[0];
 
 type ClientEntry = {
     id: number,
@@ -20,14 +18,35 @@ type ClientEntry = {
 }
 
 export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Server, config: Config, commandStore: CommandStore) {
+    let nextClientId = 0;
     const clients: Record<number, ClientEntry> = {};
     const server = new WebSocketServer({ server: httpServer });
+    const handlers: Partial<Record<ClientMessageTypes, ClientMessageHandler>> = {};
 
-    function getUniqueId(): number {
-        let id = 0;
-        while (id in clients) { id++; }
-        return id;
+    function registerMessageHandler(messageType: ClientMessageTypes, handler: ClientMessageHandler) {
+        handlers[messageType] = handler;
     }
+
+    function addClient(clientId: number, socket: WebSocket, version: string, timeoutDuration: number) {
+        clearTimeout(clients[clientId]?.timeout);
+        clients[clientId] = {
+            id: clientId,
+            socket,
+            version,
+            timeout: setTimeout(() => removeClient(clientId, StatusCode.UNAUTHENTICATED), timeoutDuration)
+        };
+    }
+
+    function removeClient(id: number, code: StatusCode) {
+        clients[id]?.socket.close(code);
+        clearTimeout(clients[id]?.timeout);
+        delete clients[id]; 
+        logger.info(`[webSocketHandler] Removing client ${id} for ${code}`);
+    }
+
+    function includes(clientId: number) {
+        return clients[clientId] != null;
+    } 
 
     function createCommand(request: CommandRequest): Command {
         // Strip clientIds so clients don't know about each other
@@ -39,18 +58,7 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
         };
     }
 
-    function send(clientId: number, command: Command) {
-        if (!clients[clientId]) {
-            logger.warn("[webSocketHandler] Client", clientId, "does not exist");
-            return;
-        }
-
-        const destination = clients[clientId];
-        const commandJson = JSON.stringify(command);
-        destination.socket.send(commandJson);
-    }
-
-    function sendToClient(request: CommandRequest) {
+    function send(request: CommandRequest) {
         // if broadcast, populate clientIds with all connected clients
         if (request.clientIds.length === 1 && request.clientIds[0] === -1){
             const everyone = Object.keys(clients).map(Number);
@@ -58,106 +66,43 @@ export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Serv
         }
 
         const command = createCommand(request);
+        const commandString = JSON.stringify(command);
         commandStore.addRequest(command.commandId, request);
 
         logger.debug("[webSocketHandler] TX", command);
-        request.clientIds.forEach(x => send(x, command));
+
+        for (const clientId of request.clientIds) {
+            if (!clients[clientId]) {
+                logger.warn(`[webSocketHandler] Client ${clientId} does not exist`);
+                continue;
+            }
+
+            clients[clientId].socket.send(commandString);
+        }
 
         return command.commandId;
     }
 
-    function purge(id: number) {
-        clients[id]?.socket.close(UNAUTHENTICATED, "Reauthenticate");
-        delete clients[id]; 
-        logger.info(`[webSocketHandler] Client ${id} has expired, disconnecting`);
-    }
+    function acceptConnection(webSocket: WebSocket) {
+        let clientId = nextClientId++;
 
-    function initializeClient(id: number) {
-        // Check client version
-        const clientVersion = clients[id].version;
-        const clientMajorVersion = clientVersion?.split(".")[0];
-
-        if (clientMajorVersion !== SERVER_MAJOR_VERSION && !config.server.forceServeIncompatibleClients) {
-            logger.warn(`[webSocketHandler] Refusing connection: client ${id} is version ${clientVersion}, but server is ${SERVER_MAJOR_VERSION}`);
-            clients[id].socket.close(INCOMPATIBLE_VERSION, `Migrate to ${SERVER_MAJOR_VERSION} or enable forceServeIncompatibleClients in server settings`);
-            return;
-        }
-
-        // Assign clientId to client
-        logger.info(`[webSocketHandler] Client ${id} of version ${clientVersion} connected`);
-        sendToClient({ clientIds: [id], module: "self", action: "set", parameters: ["clientId", id] });
-
-        // Pass config
-        Object.keys(config.modules).forEach(module => {
-            const settings = config.modules[module].public;
-            const keys = settings["data"];
-
-            Object.keys(keys).forEach(key => {
-                const value = keys[key];
-                sendToClient({ clientIds: [id], module, action: "set", parameters: [key, value] });
-            });
-
-            const enableCommand = settings.isEnabled ? "enable" : "disable";
-            const enableDebugCommand = settings.isDebug ? "enableDebug" : "disableDebug";
-            sendToClient({ clientIds: [id], module, action: enableCommand, parameters: [] });
-            sendToClient({ clientIds: [id], module, action: enableDebugCommand, parameters: [] });
-        });
-    }
-
-    function acceptConnection(ws: WebSocket) {
-        let id = getUniqueId();
-
-        ws.on('message', (data: Data) => {
+        webSocket.on('message', (data: Data) => {
             if (data == null) { return; }
 
-            const response: ClientMessage = JSON.parse((data as Buffer).toString());
-            
-            logger.debug(`[webSocketHandler] RX ${response.type} from client ${id}`);
+            const message = JSON.parse((data as Buffer).toString()) as ClientMessage;
+            logger.debug(`[webSocketHandler] RX ${message.type} from client ${clientId}`);
 
-            if (response.type === "CommandResponse") {
-                const data: CommandResponseMessage = response.data;
-                commandStore.addResponse(id, data);
-                return;
-            }
-
-            if (response.type !== "Authentication") { return; }
-
-            // Authentication
-            const authMessage: AuthenticationMessage = response.data;
-
-            try {
-                const decoded = jwt.verify(authMessage.jwt, config.server.authentication.jwtSecret) as JwtPayload;
-                if (!decoded.iat || !decoded.exp) { return; }
-                const duration = Math.max(0, decoded.exp - decoded.iat) * 1000;
-
-                const isNewClient = clients[id] == null;
-
-                clearTimeout(clients[id]?.timeout);
-                clients[id] = {
-                    id,
-                    socket: ws,
-                    version: authMessage.version,
-                    timeout: setTimeout(() => purge(id), duration),
-                };
-                logger.debug(`[webSocketHandler] Client ${id} will expire in ${duration}ms`);
-
-                if (isNewClient) { initializeClient(id); }
-
-            } catch (error) {
-                logger.error(`[webSocketHandler]`, error);
-            }
+            const context: ClientMessageHandlerContext = {
+                logger, config, commandStore, webSocket, includes, addClient, removeClient, send
+            };
+            const handler = handlers[message.type];
+            if (handler) { handler(clientId, message, context); }
         })
 
-        ws.on('close', () => {
-            clients[id]?.socket.close();
-            delete clients[id]; 
-            logger.info(`Client ${id} disconnected`);
-        });
+        webSocket.on('close', () => removeClient(clientId, StatusCode.NORMAL));
     }
 
     // Initialize server connection handling
     server.on('connection', acceptConnection);
-
-    // Return public interface
-    return { sendToClient };
+    return { send, includes, addClient, removeClient, registerMessageHandler };
 }

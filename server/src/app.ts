@@ -6,6 +6,8 @@ import createApp from "./createApp";
 import { Logger, ILogObj } from "tslog";
 import { readConfig, readCerts } from "./readConfig";
 import Package from "../package.json"
+import commandResponseHandler from "./websocket/commandResponseHandler";
+import authenticationHandler from "./websocket/authenticationHandler";
 
 // Singleton logger instance
 const logger = new Logger<ILogObj>({
@@ -25,6 +27,8 @@ const httpsServer = https.createServer(certs, app);
 // Initialize modules
 const commandStore = createCommandStore(logger, config.server.maxCommandHistorySaved);
 const wsHandler = createWebSocketHandler(logger, httpsServer, config, commandStore);
+wsHandler.registerMessageHandler("Authentication", authenticationHandler);
+wsHandler.registerMessageHandler("CommandResponse", commandResponseHandler);
 createCommandLineHandler(wsHandler);
 
 app.locals.logger = logger;

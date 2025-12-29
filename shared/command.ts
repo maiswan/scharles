@@ -16,6 +16,8 @@ export type Command = {
 };
 
 // client -> server
+export type ClientMessageTypes = "CommandResponse" | "Authentication";
+
 export type ClientMessage =
     | { type: "CommandResponse", data: CommandResponseMessage }
     | { type: "Authentication", data: AuthenticationMessage };
