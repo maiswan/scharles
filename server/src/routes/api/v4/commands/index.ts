@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
-import { CommandRequest } from "../../../../../../shared/command";
-import authenticateJwt, { Role } from "../../../../middlewares/jwt";
+import { CommandRequest } from "../../../../CommandRequest";
+import verifyJwtHeader from "../../../../middlewares/verifyJwtHeader";
+import { createCommandMessage } from "../../../../createCommandMessage";
+import { Role } from "../../../../Roles";
 
 export const get = [
-    authenticateJwt(Role.Admin),
+    verifyJwtHeader(Role.Admin),
     (req: Request, res: Response) => {
         const { commandStore } = req.app.locals;
         const commands = commandStore.getAll();
@@ -12,7 +14,7 @@ export const get = [
 ]
 
 export const del = [
-    authenticateJwt(Role.Admin),
+    verifyJwtHeader(Role.Admin),
     (req: Request, res: Response) => {
         const { commandStore } = req.app.locals;
         commandStore.deleteAll();
@@ -21,7 +23,7 @@ export const del = [
 ]
 
 export const post = [
-    authenticateJwt(Role.Controller),
+    verifyJwtHeader(Role.Controller),
     (req: Request, res: Response) => {
         const request = req.body as CommandRequest;
         if (!request) {
@@ -31,9 +33,12 @@ export const post = [
 
         const { commandStore, wsHandler } = req.app.locals;
 
-        const id = wsHandler.send(request);
+        const commandMessage = createCommandMessage(request);
+        commandStore.addMessage(commandMessage);
+        wsHandler.send(request.clientIds, commandMessage);
+        
         setTimeout(() => {
-            const response = commandStore.get(id);
+            const response = commandStore.get(commandMessage.commandId);
             res.status(200).json(response);
         }, 500);
     }

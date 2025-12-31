@@ -1,7 +1,7 @@
 import { Logger, ILogObj } from "tslog";
 import { Config } from "./config";
 import { CommandStore } from "./src/createCommandStore";
-import { JwtRolePayload } from "./src/middlewares/jwt";
+import { JwtRolePayload } from "./src/middlewares/verifyJwtHeader";
 import { WebSocketHandler } from "./src/websocket/createWebSocketHandler";
 
 declare global {

@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import path from "path";
-import authenticateJwt, { Role } from "../../../middlewares/jwt";
+import verifyJwtHeader from "../../../middlewares/verifyJwtHeader";
+import { Role } from "../../../Roles";
 
 export const post = [
-    authenticateJwt(Role.Client),
+    verifyJwtHeader(Role.Client),
     (req: Request, res: Response) => {
         const { config, logger } = req.app.locals;
         const paths = config.modules['wallpaper'].private?.data.paths as string[];
