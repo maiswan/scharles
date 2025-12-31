@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { useLogger } from "./useLogger";
 import { useConfigurationContext } from "./ConfigurationContext";
@@ -9,6 +9,7 @@ export interface AuthenticationProviderProps {
 
 export interface AuthenticationProviderValues {
     jwt: string | null;
+    getJwt: () => string | null;
 }
 
 const AuthenticationContext = createContext<AuthenticationProviderValues | null>(null);
@@ -34,43 +35,45 @@ export default function AuthenticationProvider({ children }: AuthenticationProvi
     const isAuthenticatingRef = useRef(false);
     const authenticateIntervalRef = useRef<number | undefined>(undefined);
 
-    useEffect(() => {
-        // Prevent strict mode from running this effect twice
-        if (authenticateIntervalRef.current) { return; }
+    const getJwt = useCallback(() => token, [token]);
 
-        async function authenticate() {
+    const authenticate = useCallback(async () => {
 
-            // Prevent concurrent authentication
-            if (isAuthenticatingRef.current) { return null; }
-            isAuthenticatingRef.current = true;
+        // Prevent concurrent authentication
+        if (isAuthenticatingRef.current) { return null; }
+        isAuthenticatingRef.current = true;
 
-            logger.info(`[AuthContext] Authenticating with ${authServer} with key ending in ${authKey.slice(-4)}`);
+        logger.info(`[AuthContext] Authenticating with ${authServer} with key ending in ${authKey.slice(-4)}`);
 
-            try {
-                const response = await fetch(authServer, {
-                    method: "POST",
-                    body: JSON.stringify({ apiKey: authKey }),
-                    headers: { "Content-Type": "application/json" },
-                });
+        try {
+            const response = await fetch(authServer, {
+                method: "POST",
+                body: JSON.stringify({ apiKey: authKey }),
+                headers: { "Content-Type": "application/json" },
+            });
 
-                if (!response.ok) {
-                    logger.error(`[AuthContext] Cannot connect to ${authServer}`);
-                    isAuthenticatingRef.current = false;
-                    return null;
-                }
-
-                const { token }: { token: string } = await response.json();
-
-                logger.debug(`[AuthContext] Received JWT`);
-                isAuthenticatingRef.current = false;
-                return token;
-
-            } catch (error) {
-                logger.error(`[AuthContext]`, error);
+            if (!response.ok) {
+                logger.error(`[AuthContext] Cannot connect to ${authServer}`);
                 isAuthenticatingRef.current = false;
                 return null;
             }
+
+            const { token }: { token: string } = await response.json();
+
+            logger.debug(`[AuthContext] Received JWT`);
+            isAuthenticatingRef.current = false;
+            return token;
+
+        } catch (error) {
+            logger.error(`[AuthContext]`, error);
+            isAuthenticatingRef.current = false;
+            return null;
         }
+    }, [authKey, authServer, logger]);
+
+    useEffect(() => {
+        // Prevent strict mode from running this effect twice
+        if (authenticateIntervalRef.current) { return; }
 
         async function wrapper() {
             const token = await authenticate();
@@ -93,11 +96,12 @@ export default function AuthenticationProvider({ children }: AuthenticationProvi
 
         wrapper();
 
-    }, [authKey, authServer, logger]);
+    }, [authKey, authServer, getJwt, logger]);
 
     const value: AuthenticationProviderValues = useMemo(() => ({
-        jwt: token
-    }), [token]);
+        jwt: token,
+        getJwt,
+    }), [getJwt, token]);
 
     return (
         <AuthenticationContext.Provider value={value}>

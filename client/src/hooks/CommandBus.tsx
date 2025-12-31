@@ -1,6 +1,6 @@
 import { createContext, PropsWithChildren, useContext, useReducer } from "react";
-import { Command } from "../../../shared/command";
 import { useLogger } from "./useLogger";
+import { Command } from "../../../shared/ServerMessage";
 
 type ModuleDefinition = {
     identifier: string;
@@ -9,8 +9,8 @@ type ModuleDefinition = {
 };
 
 export type CommandAPI = {
-    command: Command;
-    respond: (command: Command, success: boolean, data: unknown | null) => void;
+    commandMessage: Command;
+    respond: (commandMessage: Command, success: boolean, data: unknown | null) => void;
 }
 
 type State = {
@@ -41,7 +41,7 @@ function reducer(state: State, action: Action): State {
         }
             
         case "dispatch": {
-            const command = action.commandAPI.command;
+            const command = action.commandAPI.commandMessage;
             const respond = action.commandAPI.respond;
             const module = state.modules[command.module];
 
@@ -73,7 +73,7 @@ export const CommandProvider: React.FC<PropsWithChildren> = ({ children }) => {
     const logger = useLogger();
 
     const dispatchCommand = (commandAPI: CommandAPI) => {
-        const command = commandAPI.command;
+        const command = commandAPI.commandMessage;
         logger.debug(`[CommandBus] Dispatching command #${command.commandId.substring(0, 8)} (${command.module}.${command.action})`);
         dispatch({ type: "dispatch", commandAPI });
     }

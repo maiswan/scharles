@@ -3,7 +3,7 @@ import { useRegisterModule } from "../../hooks/useRegisterModule";
 import PackageJson from "../../../package.json";
 import { useConfigurationContext } from "../../hooks/ConfigurationContext";
 import { useCommandBus } from "../../hooks/CommandBus";
-import { Command } from "../../../../shared/command";
+import { Command } from "../../../../shared/ServerMessage";
 
 const Self: React.FC = () => {
     // Plugin
@@ -35,13 +35,14 @@ const Self: React.FC = () => {
         const components = debug.split(" ");
 
         dispatchCommand({
-            command: {
+            commandMessage: {
+                type: "command",
                 commandId: "",
                 module: components[0],
                 action: components[1],
                 parameters: components.slice(2),
             },
-            respond: (command: Command, success: boolean, data: unknown | null) => { setDebugOutput(JSON.stringify({ command, success, data })); }
+            respond: (commandMessage: Command, success: boolean, data: unknown | null) => { setDebugOutput(JSON.stringify({ commandMessage, success, data })); }
         })
     }, [debug, dispatchCommand]);
 
@@ -109,8 +110,8 @@ const Self: React.FC = () => {
                             <div className="mt-4 secondary">Authentication Key</div>
                             <input value={authKey} onChange={(e) => setAuthKey(e.target.value)} placeholder="" />
 
-                            <div className="mt-4 secondary">Authentication Server</div>
-                            <input value={authServer} onChange={(e) => setAuthServer(e.target.value)} placeholder="https://localhost:12024/api/v3/auth" />
+                            <div className="mt-4 secondary">Authentication Endpoint</div>
+                            <input value={authServer} onChange={(e) => setAuthServer(e.target.value)} placeholder="https://localhost:12024/api/v4/auth" />
 
                             <h2 className="mt-8">Debug</h2>
                             <div className="secondary">Send to CommandBus</div>

@@ -1,23 +1,44 @@
 import { ILogObj, Logger } from "tslog";
-import { type CommandResponseMessage, type CommandRecord, type CommandRequest, getShortCommandId } from "../../shared/command";
+import { CommandResult } from "../../shared/ClientMessage";
+import { Command } from "../../shared/ServerMessage";
 
 export type CommandStore = ReturnType<typeof createCommandStore>;
 
-export function createCommandStore(logger: Logger<ILogObj>, maxCommandHistorySaved: number) {
+type ReceivedMessageEntry = {
+    result: CommandResult,
+    timestamp: Date
+}
+
+type CommandRecord = {
+    commandId: string,
+    timestamp: Date | null,
+    sentMessage: Command,
+    receivedMessages: Record<number, ReceivedMessageEntry>,
+}
+
+function getShortCommandId(value: string | CommandResult | CommandRecord | Command) {
+    let id = typeof value === "string"
+        ? value as string
+        : value.commandId;
+
+    return `#${id.substring(0, 8)}`;
+}
+
+export default function createCommandStore(logger: Logger<ILogObj>, maxCommandHistorySaved: number) {
     const store = new Map<string, CommandRecord>();
     const commandIds: string[] = [];
 
     return {
-        addRequest(commandId: string, request: CommandRequest): void {
+        addMessage(message: Command): void {
+            const commandId = message.commandId;
             logger.debug(`[commandStore] Adding command ${getShortCommandId(commandId)}`);
             
             commandIds.push(commandId);
             store.set(commandId, {
                 commandId,
-                request,
-                responses: {},
-                transmitTimestamp: new Date(),
-                receiveTimestamp: null
+                sentMessage: message,
+                receivedMessages: {},
+                timestamp: new Date(),
             });
 
             // Remove the oldest commands
@@ -30,16 +51,18 @@ export function createCommandStore(logger: Logger<ILogObj>, maxCommandHistorySav
             store.delete(oldestCommand);
         },
 
-        addResponse(clientId: number, response: CommandResponseMessage): boolean {
-            logger.debug(`[commandStore] Adding response from client ${clientId} for ${getShortCommandId(response)}`);
-            const record = store.get(response.commandId);
+        addResult(clientId: number, result: CommandResult): boolean {
+            logger.debug(`[commandStore] Adding response from client ${clientId} for ${getShortCommandId(result)}`);
+            const record = store.get(result.commandId);
             if (!record) {
-                logger.warn("[commandStore] Parent command", response.commandId, "does not exist");
+                logger.warn("[commandStore] Parent command", result.commandId, "does not exist");
                 return false;
             }
 
-            record.responses[clientId] = response;
-            record.receiveTimestamp = new Date();
+            record.receivedMessages[clientId] = {
+                result,
+                timestamp: new Date(),
+            }
 
             return true;
         },

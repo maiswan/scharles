@@ -1,6 +1,6 @@
 import "./App.css";
 import Modules from "./modules/index"
-import { useWebSocket } from "./hooks/useWebSocket";
+import { useWebSocket } from "./hooks/WebSocketHandlers/useWebSocket";
 import PackageJson from "../package.json"
 import { useMemo } from "react";
 import { useConfigurationContext } from "./hooks/ConfigurationContext";
@@ -8,12 +8,12 @@ import { useAuthenticationContext } from "./hooks/AuthenticationContext";
 
 const App: React.FC = () => {
     const { getConfig } = useConfigurationContext();
-    const { jwt } = useAuthenticationContext();
+    const { jwt, getJwt } = useAuthenticationContext();
 
     const server = useMemo(() => getConfig("maiswan/scharles-client.server"), []);
     const modules: string[] = useMemo(() => JSON.parse(getConfig("maiswan/scharles-client.modules")), []);
 
-    useWebSocket(server, jwt);
+    useWebSocket(server, jwt, getConfig, getJwt);
 
     return (
         <div className="relative w-screen h-screen">

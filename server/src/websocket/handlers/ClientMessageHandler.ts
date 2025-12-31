@@ -1,9 +1,10 @@
 import { Logger, ILogObj } from "tslog"
-import { ClientMessage, CommandRequest } from "../../../shared/command"
-import { CommandStore } from "../createCommandStore"
-import Config from "../../config"
+import { ClientMessage } from "../../../../shared/ClientMessage"
+import { CommandStore } from "../../createCommandStore"
+import Config from "../../../config"
 import { WebSocket } from "ws";
-import StatusCode from "../../../shared/codes"
+import StatusCode from "../../../../shared/StatusCode"
+import { ServerMessage } from "../../../../shared/ServerMessage";
 
 export type ClientMessageHandlerContext = {
     logger: Logger<ILogObj>,
@@ -11,8 +12,8 @@ export type ClientMessageHandlerContext = {
     config: Config,
     webSocket: WebSocket,
     includes(clientId: number): boolean,
-    send(request: CommandRequest): void,
-    addClient(clientId: number, socket: WebSocket, version: string, timeoutDuration: number): void,
+    send(clientIds: number[], message: ServerMessage): void,
+    addClient(clientId: number, socket: WebSocket, version: string): void,
     removeClient(clientId: number, code: StatusCode): void,
 }
 

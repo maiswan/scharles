@@ -1,6 +1,7 @@
 import readline from "readline";
-import { CommandRequest } from "../../../shared/command";
-import { WebSocketHandler } from "../websocket/createWebSocketHandler";
+import { Command } from "../../shared/ServerMessage";
+import { WebSocketHandler } from "./websocket/createWebSocketHandler";
+import { createCommandMessage } from "./createCommandMessage";
 
 export function createCommandLineHandler(wsHandler: WebSocketHandler) {
     const handleInput = (input: string) => {
@@ -13,8 +14,8 @@ export function createCommandLineHandler(wsHandler: WebSocketHandler) {
         if (parts.length >= 4) { parameters.push(parts[3]); }
         if (parts.length >= 5) { parameters.push(parts.slice(4).join(" ")); }
 
-        const request: CommandRequest = { clientIds, module, action, parameters };
-        return wsHandler.send(request);
+        const command = createCommandMessage({ clientIds, module, action, parameters }) ;
+        return wsHandler.send(clientIds, command);
     }
 
     const rl = readline.createInterface({

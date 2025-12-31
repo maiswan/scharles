@@ -1,14 +1,14 @@
 import { createWebSocketHandler } from "./websocket/createWebSocketHandler";
 import https from "https";
 import { createCommandLineHandler } from "./commandLineHandler";
-import { createCommandStore } from "./createCommandStore";
+import createCommandStore from "./createCommandStore";
 import createApp from "./createApp";
 import { Logger, ILogObj } from "tslog";
 import { readConfig, readCerts } from "./readConfig";
 import Package from "../package.json"
-import commandResponseHandler from "./websocket/commandResponseHandler";
-import authenticationHandler from "./websocket/authenticationHandler";
-
+import handleAuthRequest from "./websocket/handlers/handleAuthRequest";
+import handleConfigRequest from "./websocket/handlers/handleConfigRequest";
+import handleCommandResult from "./websocket/handlers/handleCommandResult";
 // Singleton logger instance
 const logger = new Logger<ILogObj>({
     prettyLogTemplate: "{{yyyy}}.{{mm}}.{{dd}} {{hh}}:{{MM}}:{{ss}}:{{ms}}\t{{logLevelName}}\t",
@@ -27,8 +27,9 @@ const httpsServer = https.createServer(certs, app);
 // Initialize modules
 const commandStore = createCommandStore(logger, config.server.maxCommandHistorySaved);
 const wsHandler = createWebSocketHandler(logger, httpsServer, config, commandStore);
-wsHandler.registerMessageHandler("Authentication", authenticationHandler);
-wsHandler.registerMessageHandler("CommandResponse", commandResponseHandler);
+wsHandler.registerMessageHandler("authRequest", handleAuthRequest);
+wsHandler.registerMessageHandler("configRequest", handleConfigRequest);
+wsHandler.registerMessageHandler("commandResult", handleCommandResult);
 createCommandLineHandler(wsHandler);
 
 app.locals.logger = logger;

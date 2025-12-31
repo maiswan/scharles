@@ -18,7 +18,7 @@ export function useConfigurationContext() {
     return context;
 }
 
-type ConfigKey =
+export type ConfigKey =
     | "maiswan/scharles-client.authKey"
     | "maiswan/scharles-client.authServer"
     | "maiswan/scharles-client.server"
@@ -26,7 +26,7 @@ type ConfigKey =
 
 const DEFAULT_CONFIG: Record<ConfigKey, string> = {
     "maiswan/scharles-client.authKey": "",
-    "maiswan/scharles-client.authServer": "https://localhost:12024/api/v3/auth",
+    "maiswan/scharles-client.authServer": "https://localhost:12024/api/v4/auth",
     "maiswan/scharles-client.server": "wss://localhost:12024",
     "maiswan/scharles-client.modules": JSON.stringify(['wallpaper', 'backdropFilter', 'noise', 'ripple', 'self']),
 }
