@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useCommandBus } from "./CommandBus";
 import { useLogger } from "./useLogger";
 
@@ -13,42 +13,42 @@ export function useRegisterModule(
     const [isEnabled, setIsEnabled] = useState(false);
     const [isDebug, setIsDebug] = useState(false);
 
-    const enable = useCallback(() => {
+    const enable = () => {
         setIsEnabled(true);
         logger.info(`[useModule] ${identifier} enabled`);
-    }, []);
+    };
 
-    const disable = useCallback(() => {
+    const disable = () => {
         setIsEnabled(false);
         logger.info(`[useModule] ${identifier} disabled`);
-    }, []);
+    };
 
-    const toggle = useCallback(() => {
+    const toggle = () => {
         setIsEnabled((prev) => {
             logger.info(`[useModule] ${identifier} toggled to ${!prev ? 'enabled' : 'disabled'}`);
             return !prev
         });
-    }, []);
+    };
 
-    const enableDebug = useCallback(() => {
+    const enableDebug = () => {
         setIsDebug(true);
         logger.info(`[useModule] ${identifier} debugging enabled`);
-    }, []);
+    };
 
-    const disableDebug = useCallback(() => {
+    const disableDebug = () => {
         setIsDebug(false);
         logger.info(`[useModule] ${identifier} debugging enabled`);
-    }, []);
+    };
 
-    const toggleDebug = useCallback(() => {
+    const toggleDebug = () => {
         setIsDebug((prev) => {
             logger.info(`[useModule] ${identifier} debugging toggled to ${!prev ? 'enabled' : 'disabled'}`);
             return !prev
         });
-    }, []);
+    };
 
     // The final, public-facing API has default implementations which can be overriden by modules
-    const methods = useMemo(() => ({
+    const methods = {
         enable,
         disable,
         toggle,
@@ -59,13 +59,13 @@ export function useRegisterModule(
         isDebug: () => isDebug,
         isDebugging: () => isDebug, // backward compatibility
         ...api,
-    }), [enable, disable, toggle, enableDebug, disableDebug, toggleDebug, api, isEnabled, isDebug]);
+    };
 
     useEffect(() => {
 
         register({ identifier, methods });
-
         return () => unregister(identifier);
+
     }, []);
 
     return methods;

@@ -3,7 +3,7 @@ import { ServerMessage } from '../../../../shared/ServerMessage';
 import { useLogger } from '../useLogger';
 import { useCommandBus } from '../CommandBus';
 import StatusCode from "../../../../shared/StatusCode";
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { ConfigKey } from '../ConfigurationContext';
 import { ServerMessageHandler, ServerMessageHandlerContext } from './handlers/ServerMessageHandler';
 import handleConfigSnapshot from './handlers/handleConfigSnapshot';
@@ -29,7 +29,7 @@ export function useWebSocket(server: string, jwt: string | null, getConfig: (key
     // const clientIdRef = useRef<number | null>(null);
     const reconnectIntervalRef = useRef<number | undefined>(undefined);
 
-    const send = useCallback((message: ClientMessage) => {
+    const send = (message: ClientMessage) => {
         if (socketRef.current?.readyState !== WebSocket.OPEN) {
             logger.warn('[useWebSocket] Cannot send message as WebSocket is not open');
             return;
@@ -37,30 +37,28 @@ export function useWebSocket(server: string, jwt: string | null, getConfig: (key
 
         logger.debug('[useWebSocket] TX', message);
         socketRef.current.send(JSON.stringify(message));
-    }, [logger]);
+    };
 
 
     // Events
-    const onOpen = useCallback((server: string) => {
+    const onOpen = (server: string) => {
         if (jwt == null) { return; }
 
         logger.info(`[useWebSocket] Connected to ${server}`);
 
         clearInterval(reconnectIntervalRef.current);
+    };
 
-    }, [jwt, logger]);
-
-    const onMessage = useCallback((event: MessageEvent) => {
+    const onMessage = (event: MessageEvent) => {
         const message = JSON.parse(event.data) as ServerMessage;
         logger.debug("[useWebSocket] RX", message);
 
         const context: ServerMessageHandlerContext = { getConfig, logger, send, getJwt, dispatchCommand };
         const handler = serverMessageHandlers[message.type];
         if (handler) { handler(message, context); }
+    };
 
-    }, [logger, getConfig, send, getJwt, dispatchCommand]);
-
-    const onClose = useCallback((event: CloseEvent) => {
+    const onClose = (event: CloseEvent) => {
         logger.info('[useWebSocket] Connection closed:', event.reason);
         socketRef.current = null;
 
@@ -70,26 +68,25 @@ export function useWebSocket(server: string, jwt: string | null, getConfig: (key
 
         reconnectIntervalRef.current = window.setInterval(() => {
             logger.info("[useWebSocket] Attempting reconnection");
+
+            if (jwt == null) { return; }
+            if (socketRef.current) { return; }
+
             initialize();
         }, RECONNECT_INTERVAL);
-    }, [logger]);
+    };
 
-    const onError = useCallback((error: Event) => {
+    const onError = (error: Event) => {
         logger.error('[useWebSocket] Error', error);
-    }, [logger]);
+    };
 
-    const initialize = useCallback(() => {
-
-        if (jwt == null) { return; }
-        if (socketRef.current) { return; }
-
+    const initialize = () => {
         socketRef.current = new WebSocket(server);
         socketRef.current.onopen = () => onOpen(server);
         socketRef.current.onmessage = (e) => onMessage(e);
         socketRef.current.onclose = (e) => onClose(e);
         socketRef.current.onerror = (e) => onError(e);
-
-    }, [jwt, onClose, onError, onMessage, onOpen, server]);
+    };
 
     // Lifecycle
     useEffect(() => {
@@ -97,6 +94,5 @@ export function useWebSocket(server: string, jwt: string | null, getConfig: (key
         if (socketRef.current) { return; }
 
         initialize();
-        
-    }, [initialize, jwt]);
+    }, [jwt]);
 }

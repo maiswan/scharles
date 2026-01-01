@@ -4,7 +4,7 @@ import { Server } from "http";
 import { randomUUID } from "crypto";
 import { CommandStore } from "../createCommandStore";
 import { Logger, ILogObj } from "tslog";
-import { ClientMessageHandler, ClientMessageHandlerContext } from "./ClientMessageHandler";
+import { ClientMessageHandler, ClientMessageHandlerContext } from "./handlers/ClientMessageHandler";
 import StatusCode from "../../../shared/StatusCode";
 import { ServerMessage, ServerHello } from "../../../shared/ServerMessage";
 import { ClientMessage, ClientMessageTypes as ClientMessageType } from "../../../shared/ClientMessage";
