@@ -1,30 +1,21 @@
 import { createContext, ReactNode, useCallback, useContext, useMemo, useRef } from "react";
 import { useLogger } from "./useLogger";
 
-export interface ConfigurationContextProps {
-    children: ReactNode;
-}
-
 export interface ConfigurationContextValues {
     getConfig: (key: ConfigKey) => string;
     setConfig: (key: ConfigKey, value: string) => void;
 }
 
-export const ConfigurationContext = createContext<ConfigurationContextValues | undefined>(undefined);
-
-export function useConfigurationContext() {
-    const context = useContext(ConfigurationContext);
-    if (!context) { throw new Error("useConfigurationContext must be used within a ConfigurationProvider"); }
-    return context;
+export type Config = {
+    "maiswan/scharles-client.authKey": string,
+    "maiswan/scharles-client.authServer": string,
+    "maiswan/scharles-client.server": string,
+    "maiswan/scharles-client.modules": string,
 }
 
-export type ConfigKey =
-    | "maiswan/scharles-client.authKey"
-    | "maiswan/scharles-client.authServer"
-    | "maiswan/scharles-client.server"
-    | "maiswan/scharles-client.modules";
+export type ConfigKey = keyof Config;
 
-const DEFAULT_CONFIG: Record<ConfigKey, string> = {
+const DEFAULT_CONFIG: Config = {
     "maiswan/scharles-client.authKey": "",
     "maiswan/scharles-client.authServer": "https://localhost:12024/api/v4/auth",
     "maiswan/scharles-client.server": "wss://localhost:12024",
@@ -34,6 +25,18 @@ const DEFAULT_CONFIG: Record<ConfigKey, string> = {
 // remove "maiswan/scharles-client." for clearer debugging output
 function trimKey(key: ConfigKey) {
     return key.substring(24);
+}
+
+const ConfigurationContext = createContext<ConfigurationContextValues | undefined>(undefined);
+
+export function useConfigurationContext() {
+    const context = useContext(ConfigurationContext);
+    if (!context) { throw new Error("useConfigurationContext must be used within a ConfigurationProvider"); }
+    return context;
+}
+
+export interface ConfigurationContextProps {
+    children: ReactNode;
 }
 
 export default function ConfigurationProvider({ children }: ConfigurationContextProps) {
@@ -81,5 +84,4 @@ export default function ConfigurationProvider({ children }: ConfigurationContext
             {children}
         </ConfigurationContext.Provider>
     );
-
 }
