@@ -1,87 +1,65 @@
-import { createContext, ReactNode, useCallback, useContext, useMemo, useRef } from "react";
-import { useLogger } from "./useLogger";
+import React, { ReactNode, createContext, useState, useEffect } from 'react';
 
-export interface ConfigurationContextValues {
-    getConfig: (key: ConfigKey) => string;
-    setConfig: (key: ConfigKey, value: string) => void;
-}
-
-export type Config = {
+export interface Config {
     "maiswan/scharles-client.authKey": string,
     "maiswan/scharles-client.authServer": string,
     "maiswan/scharles-client.server": string,
     "maiswan/scharles-client.modules": string,
 }
 
-export type ConfigKey = keyof Config;
+type ConfigKey = keyof Config;
 
-const DEFAULT_CONFIG: Config = {
+interface ConfigContextValue {
+    config: Config;
+    setConfig: (key: ConfigKey, value: Config[ConfigKey]) => void;
+}
+
+const defaultConfig: Config = {
     "maiswan/scharles-client.authKey": "",
     "maiswan/scharles-client.authServer": "https://localhost:12024/api/v4/auth",
     "maiswan/scharles-client.server": "wss://localhost:12024",
     "maiswan/scharles-client.modules": JSON.stringify(['wallpaper', 'backdropFilter', 'noise', 'ripple', 'self']),
-}
+};
 
-// remove "maiswan/scharles-client." for clearer debugging output
-function trimKey(key: ConfigKey) {
-    return key.substring(24);
-}
+export const ConfigurationContext = createContext<ConfigContextValue | undefined>(undefined);
 
-const ConfigurationContext = createContext<ConfigurationContextValues | undefined>(undefined);
+const ConfigurationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
-export function useConfigurationContext() {
-    const context = useContext(ConfigurationContext);
-    if (!context) { throw new Error("useConfigurationContext must be used within a ConfigurationProvider"); }
-    return context;
-}
+    // Load initial config from localStorage or defaults, whichever non-null
+    const [config, setConfig] = useState<Config>(() => {
+        const output: Config = defaultConfig;
 
-export interface ConfigurationContextProps {
-    children: ReactNode;
-}
-
-export default function ConfigurationProvider({ children }: ConfigurationContextProps) {
-
-    const config = useRef<Partial<Record<ConfigKey, string>>>({});
-    const logger = useLogger();
-
-    // Retrieve config in the following order: in-memory store > localStorage > defaults
-    const getConfig = useCallback((key: ConfigKey) => {
-
-        const sources = { 
-            config: config.current[key],
-            localStorage: localStorage.getItem(key),
-            default: DEFAULT_CONFIG[key],
-        }
-
-        // { default: x } must always be non-null
-        const entry = Object.entries(sources).find(([, value]) => value != null) as [string, string];
-
-        const [source, value] = entry;
-        logger.debug(`[ConfigProvider] Getting ${trimKey(key)} from ${source}`);
-        return value;
-
-    }, [logger]);
-
-    // Writeback to in-memory store & localStorage
-    const setConfig = useCallback((key: ConfigKey, value: string) => {
-
-        logger.debug(`[ConfigProvider] Setting ${trimKey(key)}`);
-
-        config.current = ({
-            ...config.current,
-            [key]: value
+        Object.entries(defaultConfig).forEach(([k, v]) => {
+            output[k as keyof Config] = localStorage.getItem(k) ?? v;
         });
+        
+        return output;
+    });
 
-        localStorage.setItem(key, value);
-    }, [logger]);
+    // Writeback
+    useEffect(() => {
+        Object.entries(config).forEach(([k, v]) => {
+            localStorage.setItem(k, v);
+        });
+    }, [config]);
 
-    const value: ConfigurationContextValues = useMemo(() => ({
-        getConfig, setConfig
-    }), [getConfig, setConfig]);
+    const setConfigValue = (key: ConfigKey, value: Config[ConfigKey]) => {
+        setConfig((prev) => ({
+            ...prev,
+            [key]: value,
+        }));
+    };
+
+    const value: ConfigContextValue = {
+        config,
+        setConfig: setConfigValue
+    };
 
     return (
         <ConfigurationContext.Provider value={value}>
             {children}
         </ConfigurationContext.Provider>
     );
-}
+};
+
+export default ConfigurationProvider;
