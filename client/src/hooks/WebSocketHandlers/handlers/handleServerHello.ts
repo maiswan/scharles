@@ -6,8 +6,8 @@ import PackageJson from "../../../../package.json";
 const VERSION = PackageJson.version;
 
 export default async function handleServerHello(_message: ServerMessage, context: ServerMessageHandlerContext) {
-    const endpoint = context.getConfig("maiswan/scharles-client.authServer");
-    const jwt = context.getJwt();
+    const endpoint = context.config["maiswan/scharles-client.authServer"];
+    const jwt = context.token;
 
     if (jwt == null) {
         context.logger.warn('[useWebSocket.hello] No JWT provided, skipping authentication');

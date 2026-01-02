@@ -1,112 +1,81 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, ReactNode, useEffect, useRef, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { useLogger } from "./useLogger";
-import { useConfigurationContext } from "./ConfigurationContext";
+import { ConfigurationContext } from "./ConfigurationContext";
+import useNonNullContext from "./useNonNullContext";
 
-export interface AuthenticationProviderProps {
-    children: ReactNode;
-}
+export const AuthenticationContext = createContext<string | undefined>(undefined);
 
-export interface AuthenticationProviderValues {
-    jwt: string | null;
-    getJwt: () => string | null;
-}
+const REAUTH_BUFFER = 10000; // reauthenticate x ms before expiration
+const MIN_REAUTH_INTERVAL = 5000; // reauthenticate no more frequent than x ms
 
-const AuthenticationContext = createContext<AuthenticationProviderValues | null>(null);
+const AuthenticationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
-export function useAuthenticationContext() {
-    const context = useContext(AuthenticationContext);
-    if (!context) { throw new Error("useAuthenticationContext must be used within a AuthenticationProvider"); }
-    return context;
-}
-
-
-const REAUTHENICATION_BUFFER = 10000; // reauthenticate x ms before expiration
-const MIN_REAUTHENICATION_INTERVAL = 5000; // reauthenticate no more frequent than x ms
-
-export default function AuthenticationProvider({ children }: AuthenticationProviderProps) {
-    const { getConfig } = useConfigurationContext();
     const logger = useLogger();
+    const { config } = useNonNullContext(ConfigurationContext);
+    const authKey = config["maiswan/scharles-client.authKey"];
+    const authServer = config["maiswan/scharles-client.authServer"];
 
-    const authKey = useMemo(() => getConfig("maiswan/scharles-client.authKey"), []);
-    const authServer = useMemo(() => getConfig("maiswan/scharles-client.authServer"), []);
-
-    const [token, setToken] = useState<string | null>(null);
+    const [token, setToken] = useState<string | undefined>(undefined);
     const isAuthenticatingRef = useRef(false);
-    const authenticateIntervalRef = useRef<number | undefined>(undefined);
-
-    const getJwt = useCallback(() => token, [token]);
-
-    const authenticate = useCallback(async () => {
-
-        // Prevent concurrent authentication
-        if (isAuthenticatingRef.current) { return null; }
-        isAuthenticatingRef.current = true;
-
-        logger.info(`[AuthContext] Authenticating with ${authServer} with key ending in ${authKey.slice(-4)}`);
-
-        try {
-            const response = await fetch(authServer, {
-                method: "POST",
-                body: JSON.stringify({ apiKey: authKey }),
-                headers: { "Content-Type": "application/json" },
-            });
-
-            if (!response.ok) {
-                logger.error(`[AuthContext] Cannot connect to ${authServer}`);
-                isAuthenticatingRef.current = false;
-                return null;
-            }
-
-            const { token }: { token: string } = await response.json();
-
-            logger.debug(`[AuthContext] Received JWT`);
-            isAuthenticatingRef.current = false;
-            return token;
-
-        } catch (error) {
-            logger.error(`[AuthContext]`, error);
-            isAuthenticatingRef.current = false;
-            return null;
-        }
-    }, [authKey, authServer, logger]);
+    const intervalRef = useRef<number | undefined>(undefined);
 
     useEffect(() => {
-        // Prevent strict mode from running this effect twice
-        if (authenticateIntervalRef.current) { return; }
+        async function fetchJwt(authServer: string, authKey: string) {
 
-        async function wrapper() {
-            const token = await authenticate();
+            // Only allow one authentication in progress at a time
+            if (isAuthenticatingRef.current) { return MIN_REAUTH_INTERVAL; }
+            isAuthenticatingRef.current = true;
 
-            // Re-set reauthentication interval
-            let duration = 0;
-            if (token) {
+            logger.info(`[AuthContext] Authenticating with ${authServer} with key ending in ${authKey.slice(-4)}`);
+            try {
+                const response = await fetch(authServer, {
+                    method: "POST",
+                    body: JSON.stringify({ apiKey: authKey }),
+                    headers: { "Content-Type": "application/json" },
+                });
+
+                if (!response.ok) { throw new Error(`${authServer} did not respond properly`); }
+
+                const { token }: { token: string } = await response.json();
+
+                logger.debug(`[AuthContext] Received JWT`);
+
+                const { exp, iat } = jwtDecode(token);
+                if (!exp || !iat) { throw new Error(`JWT has malformed exp=${exp} or iat=${iat}`); }
+
+                const reauthInterval = Math.max(MIN_REAUTH_INTERVAL, (exp - iat) * 1000 - REAUTH_BUFFER);
                 setToken(token);
+                return reauthInterval;
 
-                const decoded = jwtDecode(token);
-                duration = ((decoded.exp ?? 0) - (decoded.iat ?? 0)) * 1000 - REAUTHENICATION_BUFFER;
+            } catch (error) {
+                logger.error(`[AuthContext]`, error);
+                return MIN_REAUTH_INTERVAL;
+
+            } finally {
+                isAuthenticatingRef.current = false;
             }
-            duration = Math.max(MIN_REAUTHENICATION_INTERVAL, duration);
-
-            logger.debug(`[AuthContext] Reauthenticating in ${duration}ms`);
-
-            clearTimeout(authenticateIntervalRef.current);
-            authenticateIntervalRef.current = window.setTimeout(wrapper, duration);
         }
 
-        wrapper();
+        const setupInterval = async () => {
+            const reauthInterval = await fetchJwt(authServer, authKey);
+            window.clearInterval(intervalRef.current);
+            intervalRef.current = window.setInterval(() => fetchJwt(authServer, authKey), reauthInterval);
+        };
 
-    }, [authKey, authServer, getJwt, logger]);
+        setupInterval();
 
-    const value: AuthenticationProviderValues = useMemo(() => ({
-        jwt: token,
-        getJwt,
-    }), [getJwt, token]);
+        return () => {
+            clearInterval(intervalRef.current);
+        };
+
+    }, [authKey, authServer]);
 
     return (
-        <AuthenticationContext.Provider value={value}>
+        <AuthenticationContext.Provider value={token}>
             {children}
         </AuthenticationContext.Provider>
     );
+};
 
-}
+export default AuthenticationProvider;
