@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useCommandBus } from "./CommandBus";
+import { useContext, useEffect, useState } from "react";
+import { CommandContext } from "./CommandBus";
 import { useLogger } from "./useLogger";
 
 export function useRegisterModule(
@@ -7,7 +7,7 @@ export function useRegisterModule(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     api: Record<string, (...args: any[]) => any>
 ) {
-    const { register, unregister } = useCommandBus();
+    const { register, unregister } = useContext(CommandContext);
     const logger = useLogger();
 
     const [isEnabled, setIsEnabled] = useState(false);

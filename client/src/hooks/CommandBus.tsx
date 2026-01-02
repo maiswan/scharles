@@ -1,4 +1,4 @@
-import { createContext, PropsWithChildren, useContext, useReducer } from "react";
+import { createContext, PropsWithChildren, useReducer } from "react";
 import { useLogger } from "./useLogger";
 import { Command } from "../../../shared/ServerMessage";
 
@@ -17,7 +17,7 @@ type State = {
     modules: Record<string, ModuleDefinition>;
 };
 
-const CommandContext = createContext<{
+export const CommandContext = createContext<{
     state: State;
     dispatchCommand: (commandAPI: CommandAPI) => void;
     register: (module: ModuleDefinition) => void;
@@ -94,5 +94,3 @@ export const CommandProvider: React.FC<PropsWithChildren> = ({ children }) => {
         </CommandContext.Provider>
     );
 };
-
-export const useCommandBus = () => useContext(CommandContext);
