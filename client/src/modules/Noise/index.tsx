@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import image from "./noise.png";
 import { useRegisterModule } from '../../hooks/useRegisterModule';
 import Debug from '../../components/Debug';
@@ -6,10 +6,10 @@ import Debug from '../../components/Debug';
 const Noise: React.FC = () => {
     // Plugin
     const [opacity, setOpacity] = useState(1.0);
-    const set = useCallback((key: string, value: unknown) => {
+    const set = (key: string, value: unknown) => {
         if (key !== "opacity") { return `Unknown key ${key}`; }
         setOpacity(Number.parseFloat(value as string));
-    }, []);
+    };
     
     // Module
     const identifier = "noise";

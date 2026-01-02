@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useRegisterModule } from '../../hooks/useRegisterModule';
 import Debug from '../../components/Debug';
 
@@ -16,12 +16,12 @@ const BackdropFilter: React.FC = () => {
     const [filters, setFilters] = useState<Record<string, unknown>>({});
     const cssFilters = toCssFilters(filters);
 
-    const set = useCallback((key: string, value: unknown) => {
+    const set = (key: string, value: unknown) => {
         if (!filterKeys.includes(key)) {
             return `Unknown fiter ${key}`;
         }
         setFilters(prev => ({ ...prev, [key]: value as string }));
-    }, []);
+    };
 
     // Module
     const identifier = "backdropFilter";
