@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
+import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite'
 
 const noAttr = () => {
@@ -25,11 +25,14 @@ const noAttr = () => {
 
 // https://vite.dev/config/
 export default defineConfig(({ command }) => {
+
+    const babel = { plugins: ['babel-plugin-react-compiler'], };
+
     if (command === 'serve') {
         // dev
-        return { plugins: [react(), tailwindcss()] };
+        return { plugins: [react({ babel }), tailwindcss()] };
     } 
     
     // build
-    return { plugins: [react(), tailwindcss(), noAttr()] };
+    return { plugins: [react({ babel }), tailwindcss(), noAttr()] };
 })

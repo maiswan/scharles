@@ -33,7 +33,7 @@ scharles offers two main methods to control clients. They use the same syntax.
 | Source | Syntax |
 |--------|--------|
 | Command line (at server process) | `clientIds module action [parameters...]` |
-| HTTP endpoint | `https://host:port/api/v3/command` |
+| HTTP endpoint | `https://host:port/api/v4/command` |
 
 ### Example commands
 #### Command Line
@@ -48,7 +48,7 @@ Ensure you have the relevant API keys inside your configuration files. The `cont
 
 Obtain a JWT by sending a POST request to the authentication endpoint.
 ```http
-POST /api/v3/auth HTTP/1.1
+POST /api/v4/auth HTTP/1.1
 Host: host:port
 Content-Type: application/json
 Content-Length: 30
@@ -60,7 +60,7 @@ Content-Length: 30
 
 With your token, send a POST to the command endpoint:
 ```http
-POST /api/v3/commands HTTP/1.1
+POST /api/v4/commands HTTP/1.1
 Host: host:port
 Content-Type: application/json
 Content-Length: 107

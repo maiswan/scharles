@@ -1,182 +1,97 @@
 import { WebSocketServer, WebSocket, Data } from "ws";
 import Config from "../../config";
 import { Server } from "http";
-import { AuthenticationMessage, ClientMessage, Command, CommandRequest, CommandResponseMessage } from "../../../shared/command";
 import { randomUUID } from "crypto";
 import { CommandStore } from "../createCommandStore";
-import PackageJson from "../../package.json";
-import { INCOMPATIBLE_VERSION, UNAUTHENTICATED } from "../../../shared/codes";
 import { Logger, ILogObj } from "tslog";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import { ClientMessageHandler, ClientMessageHandlerContext } from "./handlers/ClientMessageHandler";
+import StatusCode from "../../../shared/StatusCode";
+import { ServerMessage, ServerHello } from "../../../shared/ServerMessage";
+import { ClientMessage, ClientMessageTypes as ClientMessageType } from "../../../shared/ClientMessage";
+import PackageJson from "../../package.json";
 
 export type WebSocketHandler = ReturnType<typeof createWebSocketHandler>;
-const SERVER_MAJOR_VERSION = PackageJson.version.split(".")[0];
 
 type ClientEntry = {
-    id: number,
+    clientId: number,
     socket: WebSocket,
     version: string,
-    timeout: NodeJS.Timeout,
-    isExpired: boolean,
 }
 
 export function createWebSocketHandler(logger: Logger<ILogObj>, httpServer: Server, config: Config, commandStore: CommandStore) {
+    let nextClientId = 0;
     const clients: Record<number, ClientEntry> = {};
     const server = new WebSocketServer({ server: httpServer });
+    const handlers: Partial<Record<ClientMessageType, ClientMessageHandler>> = {};
 
-    function getUniqueId(): number {
-        let id = 0;
-        while (id in clients) { id++; }
-        return id;
+    function registerMessageHandler(messageType: ClientMessageType, handler: ClientMessageHandler) {
+        handlers[messageType] = handler;
     }
 
-    function createCommand(request: CommandRequest): Command {
-        return {
-            commandId: randomUUID(),
-            module: request.module,
-            action: request.action,
-            parameters: request.parameters
+    function addClient(clientId: number, socket: WebSocket, version: string) {
+        clients[clientId] = {
+            clientId,
+            socket,
+            version,
         };
     }
 
-    function send(clientId: number, command: Command) {
-        if (!(clientId in clients)) {
-            logger.warn("[webSocketHandler] Client", clientId, "does not exist");
-            return;
+    function removeClient(id: number, code: StatusCode) {
+        clients[id]?.socket.close(code);
+        delete clients[id]; 
+        logger.info(`[webSocketHandler] Removing client ${id} for ${code}`);
+    }
+
+    function includes(clientId: number) {
+        return clients[clientId] != null;
+    } 
+
+    function send(clientIds: number[], message: ServerMessage) {
+        // if broadcast, populate clientIds with all connected clients
+        if (clientIds.length === 1 && clientIds[0] === -1){
+            const everyone = Object.keys(clients).map(Number);
+            clientIds = everyone;
         }
 
-        const destination = clients[clientId];
-        const commandJson = JSON.stringify(command);
-        destination.socket.send(commandJson);
-    }
+        const messageString = JSON.stringify(message);
+        logger.debug("[webSocketHandler] TX", message);
 
-    function unicast(request: CommandRequest) {
-        const command = createCommand(request);
-        commandStore.addRequest(command.commandId, request);
+        for (const clientId of clientIds) {
+            if (!clients[clientId]) {
+                logger.warn(`[webSocketHandler] Client ${clientId} does not exist`);
+                continue;
+            }
 
-        logger.debug("[webSocketHandler] TX", command);
-        send(request.clientIds[0], command);
-
-        return command.commandId;
-    }
-
-    function multicast(request: CommandRequest) {
-        const command = createCommand(request);
-        commandStore.addRequest(command.commandId, request);
-
-        logger.debug("[webSocketHandler] TX", command);
-        request.clientIds.forEach(x => send(x, command));
-
-        return command.commandId;
-    }
-
-    function broadcast(request: CommandRequest) {
-        const everyone = Object.keys(clients).map(Number);
-        request.clientIds = everyone;
-
-        return multicast(request);
-    }
-
-    function purge(id: number) {
-        if (!clients[id]) { return; }
-
-        logger.info(`[webSocketHandler] Client ${id} has expired, disconnecting`);
-        clients[id].socket.close(UNAUTHENTICATED, "Reauthenticate");
-    }
-
-    function initializeClient(id: number) {
-        // Check client version
-        const clientVersion = clients[id].version;
-        const clientMajorVersion = clientVersion?.split(".")[0];
-
-        if (clientMajorVersion !== SERVER_MAJOR_VERSION && !config.server.forceServeIncompatibleClients) {
-            logger.warn(`[webSocketHandler] Refusing connection: client ${id} is version ${clientVersion}, but server is ${SERVER_MAJOR_VERSION}`);
-            clients[id].socket.close(INCOMPATIBLE_VERSION, `Migrate to ${SERVER_MAJOR_VERSION} or enable forceServeIncompatibleClients in server settings`);
-            return;
+            clients[clientId].socket.send(messageString);
         }
-
-        // Assign clientId to client
-        logger.info(`[webSocketHandler] Client ${id} of version ${clientVersion} connected`);
-        unicast({ clientIds: [id], module: "self", action: "set", parameters: ["clientId", id] });
-
-        // Pass config
-        Object.keys(config.modules).forEach(module => {
-            const settings = config.modules[module].public;
-            const keys = settings["data"];
-
-            Object.keys(keys).forEach(key => {
-                const value = keys[key];
-                unicast({ clientIds: [id], module, action: "set", parameters: [key, value] });
-            });
-
-            const enableCommand = settings.isEnabled ? "enable" : "disable";
-            const enableDebugCommand = settings.isDebug ? "enableDebug" : "disableDebug";
-            unicast({ clientIds: [id], module, action: enableCommand, parameters: [] });
-            unicast({ clientIds: [id], module, action: enableDebugCommand, parameters: [] });
-        });
     }
 
-    function acceptConnection(ws: WebSocket) {
-        let id = getUniqueId();
+    function acceptConnection(webSocket: WebSocket) {
+        
+        let clientId = nextClientId++;
 
-        ws.on('message', (data: Data) => {
+        // Identify ourselves on connection attempt
+        const hello: ServerHello = { type: "serverHello", serverVersion: PackageJson.version };
+        webSocket.send(JSON.stringify(hello));
+
+
+        webSocket.on('message', (data: Data) => {
             if (data == null) { return; }
-            if (clients[id]?.isExpired) { return; }
 
-            const response: ClientMessage = JSON.parse((data as Buffer).toString());
-            
-            logger.debug(`[webSocketHandler] RX ${response.type} from client ${id}`);
+            const message = JSON.parse((data as Buffer).toString()) as ClientMessage;
+            logger.debug(`[webSocketHandler] RX ${message.type} from client ${clientId}`);
 
-            if (response.type === "CommandResponse") {
-                const data: CommandResponseMessage = response.data;
-                commandStore.addResponse(id, data);
-                return;
-            }
-
-            if (response.type !== "Authentication") { return; }
-
-            // Authentication
-            const authMessage: AuthenticationMessage = response.data;
-
-            try {
-                const decoded = jwt.verify(authMessage.jwt, config.server.authentication.jwtSecret) as JwtPayload;
-                if (!decoded.iat || !decoded.exp) { return; }
-                const duration = Math.max(0, decoded.exp - decoded.iat) * 1000;
-
-                const isNewClient = clients[id] == null;
-                clearTimeout(clients[id]?.timeout);
-
-                clients[id] = {
-                    id,
-                    socket: ws,
-                    version: authMessage.version,
-                    timeout: setTimeout(() => purge(id), duration),
-                    isExpired: false,
-                };
-                logger.debug(`[webSocketHandler] Client ${id} will expire in ${duration}ms`);
-
-                if (isNewClient) { initializeClient(id); }
-
-            } catch (error) {
-                logger.error(`[webSocketHandler]`, error);
-            }
+            const context: ClientMessageHandlerContext = {
+                logger, config, commandStore, webSocket, includes, addClient, removeClient, send
+            };
+            const handler = handlers[message.type];
+            if (handler) { handler(clientId, message, context); }
         })
 
-        ws.on('close', () => {
-            if (!clients[id]) { return; }
-
-            clients[id].isExpired = true;
-            logger.info(`Client ${id} disconnected`);
-        });
+        webSocket.on('close', () => removeClient(clientId, StatusCode.NORMAL));
     }
 
     // Initialize server connection handling
     server.on('connection', acceptConnection);
-
-    // Return public interface
-    return {
-        unicast,
-        multicast,
-        broadcast,
-    };
+    return { send, includes, addClient, removeClient, registerMessageHandler };
 }

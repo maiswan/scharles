@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRegisterModule } from '../../hooks/useRegisterModule';
 import { RippleEffect } from './RippleEffect';
 import Debug from '../../components/Debug';
@@ -20,20 +20,20 @@ const Ripple: React.FC = () => {
 
     const nextId = useRef(0);
 
-    const eventHandler = useCallback((x: number, y: number) => {
+    const eventHandler = (x: number, y: number) => {
         const newRipple = {
             id: nextId.current++,
             x,
             y,
         };
         setRipples(prev => [...prev, newRipple]);
-    }, []);
+    };
 
-    const handleRippleComplete = useCallback((id: number) => {
+    const handleRippleComplete = (id: number) => {
         setRipples(prev => prev.filter(ripple => ripple.id !== id));
-    }, []);
+    };
 
-    const set = useCallback((key: string, value: unknown) => {
+    const set = (key: string, value: unknown) => {
         if (!keys.includes(key)) {
             return `Unknown filter ${key}`;
         }
@@ -43,7 +43,7 @@ const Ripple: React.FC = () => {
             return;
         }
         setStyles(prev => ({ ...prev, [key]: value }));
-    }, []);
+    };
 
     // Module
     const identifier = "ripple";

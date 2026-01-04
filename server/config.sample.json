@@ -32,7 +32,7 @@
 				"isEnabled": true,
 				"isDebug": false,
 				"data": {
-					"source": "https://localhost:12024/api/v3/image",
+					"source": "https://localhost:12024/api/v4/image",
 					"periodMs": 5000,
 					"transitionMs": 1000
 				}

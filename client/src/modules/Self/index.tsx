@@ -1,49 +1,51 @@
-import { useCallback, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useRegisterModule } from "../../hooks/useRegisterModule";
 import PackageJson from "../../../package.json";
-import { useConfigurationContext } from "../../hooks/ConfigurationContext";
-import { useCommandBus } from "../../hooks/CommandBus";
-import { Command } from "../../../../shared/command";
+import { ConfigurationContext } from "../../hooks/ConfigurationContext";
+import { CommandContext } from "../../hooks/CommandBus";
+import { Command } from "../../../../shared/ServerMessage";
+import useNonNullContext from "../../hooks/useNonNullContext";
 
 const Self: React.FC = () => {
     // Plugin
     const [clientId, setClientId] = useState("-1");
-    const { dispatchCommand } = useCommandBus();
+    const { dispatchCommand } = useContext(CommandContext);
 
-    const set = useCallback((key: string, value: string) => {
+    const set = (key: string, value: string) => {
         if (key !== "clientId") { return `Unknown key ${key}`; }
         setClientId(value);
-    }, []);
+    };
 
     // Module
     const identifier = "self";
     const state = useRegisterModule(identifier, { set });
 
     // Config
-    const { getConfig, setConfig } = useConfigurationContext();
-    const [server, setServer] = useState(() => getConfig("maiswan/scharles-client.server"));
-    const [modules, setModules] = useState(() => getConfig("maiswan/scharles-client.modules"));
-    const [authKey, setAuthKey] = useState(() => getConfig("maiswan/scharles-client.authKey"));
-    const [authServer, setAuthServer] = useState(() => getConfig("maiswan/scharles-client.authServer"));
+    const { config, setConfig } = useNonNullContext(ConfigurationContext);
+    const [server, setServer] = useState(() => config["maiswan/scharles-client.server"]);
+    const [modules, setModules] = useState(() => config["maiswan/scharles-client.modules"]);
+    const [authKey, setAuthKey] = useState(() => config["maiswan/scharles-client.authKey"]);
+    const [authServer, setAuthServer] = useState(() => config["maiswan/scharles-client.authServer"]);
 
     // Debug
     const [debug, setDebug] = useState("");
     const [debugOutput, setDebugOutput] = useState("");
 
-    const sendDebug = useCallback(() => {
+    const sendDebug = () => {
 
         const components = debug.split(" ");
 
         dispatchCommand({
-            command: {
+            commandMessage: {
+                type: "command",
                 commandId: "",
                 module: components[0],
                 action: components[1],
                 parameters: components.slice(2),
             },
-            respond: (command: Command, success: boolean, data: unknown | null) => { setDebugOutput(JSON.stringify({ command, success, data })); }
+            respond: (commandMessage: Command, success: boolean, data: unknown | null) => { setDebugOutput(JSON.stringify({ commandMessage, success, data })); }
         })
-    }, [debug, dispatchCommand]);
+    };
 
 
     // Initialize: show panel if any setting is empty
@@ -66,11 +68,11 @@ const Self: React.FC = () => {
     }, []);
 
     // Actions
-    const close = useCallback(() => {
+    const close = () => {
         state.disableDebug();
-    }, [state]);
+    };
 
-    const reload = useCallback(() => {
+    const reload = () => {
         setConfig("maiswan/scharles-client.server", server);
 
         const modulesArray = modules.replace(/\W/g, " ").split(" ").filter(Boolean);
@@ -80,7 +82,7 @@ const Self: React.FC = () => {
         setConfig("maiswan/scharles-client.authServer", authServer);
 
         location.reload();
-    }, [authKey, authServer, modules, server, setConfig]);
+    };
 
     return (
         <>
@@ -109,8 +111,8 @@ const Self: React.FC = () => {
                             <div className="mt-4 secondary">Authentication Key</div>
                             <input value={authKey} onChange={(e) => setAuthKey(e.target.value)} placeholder="" />
 
-                            <div className="mt-4 secondary">Authentication Server</div>
-                            <input value={authServer} onChange={(e) => setAuthServer(e.target.value)} placeholder="https://localhost:12024/api/v3/auth" />
+                            <div className="mt-4 secondary">Authentication Endpoint</div>
+                            <input value={authServer} onChange={(e) => setAuthServer(e.target.value)} placeholder="https://localhost:12024/api/v4/auth" />
 
                             <h2 className="mt-8">Debug</h2>
                             <div className="secondary">Send to CommandBus</div>

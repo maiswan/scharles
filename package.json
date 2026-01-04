@@ -1,5 +1,5 @@
 {
-    "name": "sharcles",
+    "name": "scharles",
     "private": true,
     "workspaces": [
         "scharles-client",

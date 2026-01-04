@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import jwt, { SignOptions } from "jsonwebtoken";
-import authenticateJwt, { JwtRolePayload, Role } from "../../../../middlewares/jwt";
+import verifyJwtHeader from "../../../../middlewares/verifyJwtHeader";
+import { Role } from "../../../../Roles";
 
 const roleToConfigKey = (role: Role) => {
     switch (role) {
@@ -39,7 +40,7 @@ export const post = (req: Request, res: Response) => {
         return res.status(401).json({ error: "Invalid API key" });
     }
 
-    const payload: JwtRolePayload = { role };
+    const payload = { role };
 
     const expiresIn = auth[roleToConfigKey(role)].jwtExpiration;
     const token = jwt.sign(payload, auth.jwtSecret, { expiresIn } as SignOptions);
@@ -51,7 +52,7 @@ export const post = (req: Request, res: Response) => {
 // Debugging endpoint for users to test if they're authenticated
 // If so, return what we know about them
 export const get = [
-    authenticateJwt(Role.Client),
+    verifyJwtHeader(Role.Client),
     (req: Request, res: Response) => {
         res.status(200).json(req.user);
     }
